@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eldritch Excavation - A Lovecraftian Idle Mining Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Header -->
+        <header id="game-header">
+            <h1>⚫ Eldritch Excavation ⚫</h1>
+            <p class="subtitle">Unearth the Unknowable Depths</p>
+        </header>
+
+        <!-- Main Game Area -->
+        <div id="main-game">
+            <!-- Left Panel: Stats & Info -->
+            <div id="left-panel" class="panel">
+                <div class="stat-box">
+                    <h3>⛏️ Current Mine</h3>
+                    <p id="current-ore" class="ore-name">Iron Ore</p>
+                    <p id="ore-description" class="ore-desc">The first metal drawn from the earth...</p>
+                </div>
+                
+                <div class="stat-box">
+                    <h3>💰 Resources</h3>
+                    <p><span class="label">Ore:</span> <span id="ore-count">0</span></p>
+                    <p><span class="label">Ore/click:</span> <span id="ore-per-click">1</span></p>
+                    <p><span class="label">Ore/sec:</span> <span id="ore-per-second">0</span></p>
+                </div>
+
+                <div class="stat-box">
+                    <h3>🌑 Eldritch Power</h3>
+                    <p><span class="label">Madness:</span> <span id="madness-count">0</span></p>
+                    <p><span class="label">Prestiges:</span> <span id="prestige-count">0</span></p>
+                </div>
+
+                <div class="stat-box">
+                    <h3>📊 Statistics</h3>
+                    <p><span class="label">Total Clicks:</span> <span id="total-clicks">0</span></p>
+                    <p><span class="label">Total Ore:</span> <span id="total-ore">0</span></p>
+                </div>
+            </div>
+
+            <!-- Center Panel: Main Clicker -->
+            <div id="center-panel" class="panel">
+                <div id="clicker-area">
+                    <div id="ore-crystal" class="clickable">
+                        <div class="crystal-glow"></div>
+                        <div class="crystal-core">⬟</div>
+                    </div>
+                    <p id="click-instruction">Click to excavate!</p>
+                </div>
+
+                <!-- Floating Damage Numbers -->
+                <div id="damage-numbers"></div>
+            </div>
+
+            <!-- Right Panel: Tabs -->
+            <div id="right-panel" class="panel">
+                <div class="tab-navigation">
+                    <button class="tab-btn active" data-tab="tools">⚒️ Tools</button>
+                    <button class="tab-btn" data-tab="upgrades">⬆️ Upgrades</button>
+                    <button class="tab-btn" data-tab="relics">🔮 Relics</button>
+                    <button class="tab-btn" data-tab="missions">📜 Missions</button>
+                    <button class="tab-btn" data-tab="prestige">🌟 Prestige</button>
+                </div>
+
+                <div class="tab-content-area">
+                    <!-- Tools Tab -->
+                    <div id="tools-tab" class="tab-content active">
+                        <h3>Excavation Tools</h3>
+                        <div id="tools-list" class="item-list"></div>
+                    </div>
+
+                    <!-- Upgrades Tab -->
+                    <div id="upgrades-tab" class="tab-content">
+                        <h3>Cursed Enhancements</h3>
+                        <div id="upgrades-list" class="item-list"></div>
+                    </div>
+
+                    <!-- Relics Tab -->
+                    <div id="relics-tab" class="tab-content">
+                        <h3>Forbidden Artifacts</h3>
+                        <p class="tab-description">Discover ancient relics that grant permanent power...</p>
+                        <div id="relics-list" class="item-list"></div>
+                    </div>
+
+                    <!-- Missions Tab -->
+                    <div id="missions-tab" class="tab-content">
+                        <h3>Eldritch Tasks</h3>
+                        <div id="missions-list" class="item-list"></div>
+                    </div>
+
+                    <!-- Prestige Tab -->
+                    <div id="prestige-tab" class="tab-content">
+                        <h3>Embrace the Madness</h3>
+                        <p class="tab-description">Reset your progress to gain permanent power from the void...</p>
+                        <div class="prestige-info">
+                            <p><span class="label">Madness on Prestige:</span> <span id="madness-on-prestige">0</span></p>
+                            <p><span class="label">Madness Multiplier:</span> <span id="madness-multiplier">1x</span></p>
+                        </div>
+                        <button id="prestige-btn" class="action-btn prestige-btn">Descend into Madness</button>
+                        <div id="prestige-upgrades-list" class="item-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <footer id="game-footer">
+            <button id="save-btn" class="footer-btn">💾 Save</button>
+            <button id="settings-btn" class="footer-btn">⚙️ Settings</button>
+            <button id="reset-btn" class="footer-btn">🗑️ Reset</button>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <label><input type="checkbox" id="auto-save-toggle" checked> Auto-save (every 30s)</label>
+            <br><label><input type="checkbox" id="particles-toggle" checked> Particle Effects</label>
+            <br><label><input type="checkbox" id="sound-toggle"> Sound Effects (Coming Soon)</label>
+            <br><button id="close-settings" class="action-btn">Close</button>
+        </div>
+    </div>
+
+    <script src="game-data.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
