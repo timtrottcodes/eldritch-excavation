@@ -8,13 +8,13 @@ const gameState = {
     madness: 0,
     prestiges: 0,
     currentOreIndex: 0,
-    
-    tools: {}, // { toolId: count }
+
+    tools: {}, // { toolId: level } - now tracks individual levels (0-256)
     upgrades: [], // [upgradeId, ...]
     relics: [], // [relicId, ...]
     prestigeUpgrades: [], // [upgradeId, ...]
     missions: {}, // { missionId: completed }
-    
+
     // Stats
     orePerClick: 1,
     orePerSecond: 0,
@@ -24,25 +24,15 @@ const gameState = {
     globalMultiplier: 1,
     madnessMultiplier: 1,
     autoClicksPerSecond: 0,
-    
+
     // Settings
     autoSave: true,
     particles: true,
     sound: false,
-    
+
     lastTick: Date.now(),
     lastSave: Date.now(),
 };
-
-// Initialize tools
-GAME_DATA.tools.forEach(tool => {
-    gameState.tools[tool.id] = 0;
-});
-
-// Initialize missions
-GAME_DATA.missions.forEach(mission => {
-    gameState.missions[mission.id] = false;
-});
 
 // Number formatting
 function formatNumber(num) {
@@ -51,7 +41,14 @@ function formatNumber(num) {
     if (num < 1000000000) return (num / 1000000).toFixed(2) + 'M';
     if (num < 1000000000000) return (num / 1000000000).toFixed(2) + 'B';
     if (num < 1000000000000000) return (num / 1000000000000).toFixed(2) + 'T';
-    return (num / 1000000000000000).toFixed(2) + 'Q';
+    if (num < 1000000000000000000) return (num / 1000000000000000).toFixed(2) + 'Qa';
+    if (num < 1e21) return (num / 1e18).toFixed(2) + 'Qi';
+    if (num < 1e24) return (num / 1e21).toFixed(2) + 'Sx';
+    if (num < 1e27) return (num / 1e24).toFixed(2) + 'Sp';
+    if (num < 1e30) return (num / 1e27).toFixed(2) + 'Oc';
+    if (num < 1e33) return (num / 1e30).toFixed(2) + 'No';
+    if (num < 1e36) return (num / 1e33).toFixed(2) + 'Dc';
+    return (num / 1e36).toFixed(2) + 'UDc';
 }
 
 // Calculate multipliers from upgrades and relics
@@ -63,7 +60,10 @@ function calculateMultipliers() {
     let madnessMult = 1;
     let autoClicks = 0;
     let clickMultPrestige = 1;
-    
+    let globalMultPrestige = 1;
+    let productionMultPrestige = 1;
+    let madnessGainMult = 1;
+
     // Upgrades
     gameState.upgrades.forEach(upgradeId => {
         const upgrade = GameDataHelper.getUpgrade(upgradeId);
@@ -71,9 +71,11 @@ function calculateMultipliers() {
             if (upgrade.effect.clickPower) clickMult *= upgrade.effect.clickPower;
             if (upgrade.effect.productionMult) prodMult *= upgrade.effect.productionMult;
             if (upgrade.effect.autoClick) autoClicks += upgrade.effect.autoClick;
+            if (upgrade.effect.toolEfficiency) toolMult *= upgrade.effect.toolEfficiency;
+            if (upgrade.effect.globalMult) globalMult *= upgrade.effect.globalMult;
         }
     });
-    
+
     // Relics
     gameState.relics.forEach(relicId => {
         const relic = GameDataHelper.getRelic(relicId);
@@ -84,7 +86,7 @@ function calculateMultipliers() {
             if (relic.effect.madnessMult) madnessMult *= relic.effect.madnessMult;
         }
     });
-    
+
     // Prestige upgrades
     gameState.prestigeUpgrades.forEach(upgradeId => {
         const upgrade = GameDataHelper.getPrestigeUpgrade(upgradeId);
@@ -94,14 +96,17 @@ function calculateMultipliers() {
             }
             if (upgrade.effect.toolEfficiency) toolMult *= upgrade.effect.toolEfficiency;
             if (upgrade.effect.clickMultPrestige) clickMultPrestige *= upgrade.effect.clickMultPrestige;
+            if (upgrade.effect.globalMultPrestige) globalMultPrestige *= upgrade.effect.globalMultPrestige;
+            if (upgrade.effect.productionMultPrestige) productionMultPrestige *= upgrade.effect.productionMultPrestige;
+            if (upgrade.effect.madnessGainMult) madnessGainMult *= upgrade.effect.madnessGainMult;
         }
     });
-    
+
     gameState.clickMultiplier = clickMult * clickMultPrestige;
-    gameState.productionMultiplier = prodMult;
+    gameState.productionMultiplier = prodMult * productionMultPrestige;
     gameState.toolEfficiencyMultiplier = toolMult;
-    gameState.globalMultiplier = globalMult;
-    gameState.madnessMultiplier = madnessMult;
+    gameState.globalMultiplier = globalMult * globalMultPrestige;
+    gameState.madnessMultiplier = madnessMult * madnessGainMult;
     gameState.autoClicksPerSecond = autoClicks;
 }
 
@@ -114,24 +119,24 @@ function calculateOrePerClick() {
 // Calculate ore per second from tools
 function calculateOrePerSecond() {
     let total = 0;
-    
+
     for (const toolId in gameState.tools) {
-        const count = gameState.tools[toolId];
-        if (count > 0) {
-            const production = GameDataHelper.getToolProduction(toolId, count);
+        const level = gameState.tools[toolId];
+        if (level > 0) {
+            const production = GameDataHelper.getToolProduction(toolId, level);
             total += production;
         }
     }
-    
+
     const currentOre = GAME_DATA.ores[gameState.currentOreIndex];
     total *= currentOre.baseValue;
     total *= gameState.productionMultiplier;
     total *= gameState.toolEfficiencyMultiplier;
     total *= gameState.globalMultiplier;
-    
+
     // Add auto-clicks
     total += gameState.autoClicksPerSecond * gameState.orePerClick;
-    
+
     gameState.orePerSecond = total;
 }
 
@@ -199,25 +204,37 @@ function createClickEffect() {
     setTimeout(() => $('#ore-crystal').removeClass('clicked'), 100);
 }
 
-// Buy tool
-function buyTool(toolId, amount = 1) {
+// Buy tool (level up)
+function buyTool(toolId, levels = 1) {
     const tool = GameDataHelper.getTool(toolId);
-    if (!tool) return;
+    if (!tool) return false;
+
+    // Check if tool is unlocked
+    if (!GameDataHelper.isToolUnlocked(toolId, gameState.tools)) {
+        return false;
+    }
 
     const currentLevel = gameState.tools[toolId];
+
+    // Can't exceed max level
+    if (currentLevel >= MAX_TOOL_LEVEL) return false;
+
+    // Calculate how many levels we can actually buy
+    const maxLevels = Math.min(levels, MAX_TOOL_LEVEL - currentLevel);
     let totalCost = 0;
 
-    // Calculate total cost for buying multiple
-    for (let i = 0; i < amount; i++) {
+    // Calculate total cost for buying multiple levels
+    for (let i = 0; i < maxLevels; i++) {
         totalCost += GameDataHelper.getToolCost(toolId, currentLevel + i);
     }
 
     if (gameState.ore >= totalCost) {
         gameState.ore -= totalCost;
-        gameState.tools[toolId] += amount;
+        gameState.tools[toolId] += maxLevels;
         updateCalculations();
         checkMissions();
         updateUI();
+        renderTools(); // Re-render tool list to show new level
         return true;
     }
     return false;
@@ -241,6 +258,8 @@ function buyUpgrade(upgradeId) {
         updateCalculations();
         checkMissions();
         updateUI();
+        renderUpgrades(); // Re-render upgrades list
+        renderTools(); // Might affect tool unlocks due to efficiency upgrades
         return true;
     }
     return false;
@@ -260,6 +279,8 @@ function buyRelic(relicId) {
         checkMissions();
         showNotification(`Relic acquired: ${relic.name}!`);
         updateUI();
+        renderRelics(); // Re-render relics list
+        renderTools(); // Relics affect production
         return true;
     }
     return false;
@@ -282,6 +303,8 @@ function buyPrestigeUpgrade(upgradeId) {
         gameState.prestigeUpgrades.push(upgradeId);
         updateCalculations();
         updateUI();
+        renderPrestigeUpgrades(); // Re-render prestige upgrades list
+        renderTools(); // Prestige upgrades affect tool efficiency
         return true;
     }
     return false;
@@ -312,12 +335,13 @@ function prestige() {
     gameState.totalClicks = 0;
     gameState.currentOreIndex = 0;
 
+    // Reset all tool levels to 0
     GAME_DATA.tools.forEach(tool => {
         gameState.tools[tool.id] = 0;
     });
 
     gameState.upgrades = [];
-    // Relics are kept!
+    // Relics are kept - they persist through prestige!
 
     // Add madness and prestige count
     gameState.madness += madnessGain;
@@ -335,6 +359,7 @@ function prestige() {
     updateCalculations();
     checkMissions();
     updateUI();
+    renderAllLists(); // Re-render everything after prestige
     showNotification(`Prestige complete! Gained ${madnessGain} Madness!`);
 }
 
@@ -350,11 +375,11 @@ function checkMissions() {
         } else if (mission.requirement.totalOre && gameState.totalOre >= mission.requirement.totalOre) {
             completed = true;
         } else if (mission.requirement.toolsPurchased) {
-            let totalTools = 0;
+            let totalLevels = 0;
             for (const toolId in gameState.tools) {
-                totalTools += gameState.tools[toolId];
+                totalLevels += gameState.tools[toolId];
             }
-            if (totalTools >= mission.requirement.toolsPurchased) {
+            if (totalLevels >= mission.requirement.toolsPurchased) {
                 completed = true;
             }
         } else if (mission.requirement.upgradesPurchased && gameState.upgrades.length >= mission.requirement.upgradesPurchased) {
@@ -362,6 +387,8 @@ function checkMissions() {
         } else if (mission.requirement.relicsPurchased && gameState.relics.length >= mission.requirement.relicsPurchased) {
             completed = true;
         } else if (mission.requirement.prestiges && gameState.prestiges >= mission.requirement.prestiges) {
+            completed = true;
+        } else if (mission.requirement.oreIndex !== undefined && gameState.currentOreIndex >= mission.requirement.oreIndex) {
             completed = true;
         }
 
@@ -371,6 +398,7 @@ function checkMissions() {
             // Give rewards
             if (mission.reward.ore) {
                 gameState.ore += mission.reward.ore;
+                gameState.totalOre += mission.reward.ore;
             }
             if (mission.reward.madness) {
                 gameState.madness += mission.reward.madness;
@@ -462,40 +490,155 @@ function renderTools() {
     container.empty();
 
     GAME_DATA.tools.forEach(tool => {
-        const count = gameState.tools[tool.id];
-        const cost = GameDataHelper.getToolCost(tool.id, count);
-        const production = GameDataHelper.getToolProduction(tool.id, count);
-        const totalProduction = production * GAME_DATA.ores[gameState.currentOreIndex].baseValue *
-                               gameState.productionMultiplier * gameState.toolEfficiencyMultiplier *
-                               gameState.globalMultiplier;
+        const level = gameState.tools[tool.id];
+        const isUnlocked = GameDataHelper.isToolUnlocked(tool.id, gameState.tools);
+        const isMaxed = level >= MAX_TOOL_LEVEL;
+        const rarity = getRarityForLevel(level);
 
-        const card = $('<div class="item-card">');
+        const card = $('<div class="item-card tool-card">');
 
+        // Lock or max level status
+        if (!isUnlocked) {
+            card.addClass('locked');
+        } else if (isMaxed) {
+            card.addClass('maxed');
+        }
+
+        // Header with name and level
         const header = $('<div class="item-header">');
-        header.append($('<span class="item-name">').text(`${tool.icon} ${tool.name}`));
-        header.append($('<span class="item-level">').text(`Level ${count}`));
+        const nameSpan = $('<span class="item-name">').text(`${tool.icon} ${tool.name}`);
+
+        // Color by rarity
+        if (level > 0) {
+            nameSpan.css('color', rarity.color);
+        }
+
+        header.append(nameSpan);
+
+        // Level and rarity display
+        const levelInfo = $('<span class="item-level">');
+        if (!isUnlocked) {
+            // Show unlock requirement
+            const toolIndex = GAME_DATA.tools.findIndex(t => t.id === tool.id);
+            const prevTool = GAME_DATA.tools[toolIndex - 1];
+            const prevLevel = gameState.tools[prevTool.id] || 0;
+            levelInfo.text(`🔒 Need ${prevTool.name} Lv${RARITY_TIERS.EPIC.requiredLevel} (${prevLevel}/${RARITY_TIERS.EPIC.requiredLevel})`);
+            levelInfo.css('color', '#FF4444');
+        } else if (isMaxed) {
+            levelInfo.text(`Lv ${level}/${MAX_TOOL_LEVEL} MAX`);
+            levelInfo.css('color', '#FFD700');
+        } else {
+            levelInfo.text(`Lv ${level}/${MAX_TOOL_LEVEL} - ${rarity.name}`);
+            if (level > 0) {
+                levelInfo.css('color', rarity.color);
+            }
+        }
+        header.append(levelInfo);
 
         const description = $('<div class="item-description">').text(tool.description);
 
-        const stats = $('<div class="item-stats">');
-        stats.append($('<span class="item-production">').text(`+${formatNumber(totalProduction)}/s`));
-        stats.append($('<span class="item-cost">').text(`💰 ${formatNumber(cost)}`));
+        // Production and cost
+        if (isUnlocked && !isMaxed) {
+            const production = GameDataHelper.getToolProduction(tool.id, level);
+            const totalProduction = production * GAME_DATA.ores[gameState.currentOreIndex].baseValue *
+                                   gameState.productionMultiplier * gameState.toolEfficiencyMultiplier *
+                                   gameState.globalMultiplier;
 
-        const buyBtn = $('<button class="buy-btn">').text('Buy 1');
-        buyBtn.prop('disabled', gameState.ore < cost);
-        buyBtn.on('click', () => buyTool(tool.id, 1));
+            const cost = GameDataHelper.getToolCost(tool.id, level);
 
-        const buy10Btn = $('<button class="buy-btn">').text('Buy 10').css('margin-top', '5px');
-        let cost10 = 0;
-        for (let i = 0; i < 10; i++) {
-            cost10 += GameDataHelper.getToolCost(tool.id, count + i);
+            const stats = $('<div class="item-stats">');
+            if (level > 0) {
+                stats.append($('<span class="item-production">').text(`+${formatNumber(totalProduction)}/s`));
+            } else {
+                stats.append($('<span class="item-production">').text(`First level`));
+            }
+            stats.append($('<span class="item-cost">').text(`💰 ${formatNumber(cost)}`));
+
+            // Level up buttons
+            const buyBtn = $('<button class="buy-btn">').text('Level +1');
+            buyBtn.prop('disabled', gameState.ore < cost);
+            buyBtn.on('click', () => buyTool(tool.id, 1));
+
+            const buy10Btn = $('<button class="buy-btn">').text('Level +10').css('margin-top', '5px');
+            let cost10 = 0;
+            const maxLevels = Math.min(10, MAX_TOOL_LEVEL - level);
+            for (let i = 0; i < maxLevels; i++) {
+                cost10 += GameDataHelper.getToolCost(tool.id, level + i);
+            }
+            buy10Btn.prop('disabled', gameState.ore < cost10 || maxLevels === 0);
+            buy10Btn.on('click', () => buyTool(tool.id, 10));
+
+            // Progress bar to next rarity
+            const progressBar = createRarityProgressBar(level);
+
+            card.append(header, description, stats, progressBar, buyBtn, buy10Btn);
+        } else if (isMaxed) {
+            card.append(header, description);
+            const maxMessage = $('<div class="item-description">').text('✨ Maximum Level Reached! ✨').css({
+                'color': '#FFD700',
+                'text-align': 'center',
+                'font-weight': 'bold'
+            });
+            card.append(maxMessage);
+        } else {
+            card.append(header, description);
         }
-        buy10Btn.prop('disabled', gameState.ore < cost10);
-        buy10Btn.on('click', () => buyTool(tool.id, 10));
 
-        card.append(header, description, stats, buyBtn, buy10Btn);
         container.append(card);
     });
+}
+
+// Create progress bar to next rarity tier
+function createRarityProgressBar(currentLevel) {
+    const currentRarity = getRarityForLevel(currentLevel);
+
+    // Find next rarity
+    let nextRarity = null;
+    let nextThreshold = MAX_TOOL_LEVEL;
+
+    if (currentLevel < RARITY_TIERS.UNCOMMON.requiredLevel) {
+        nextRarity = RARITY_TIERS.UNCOMMON;
+        nextThreshold = RARITY_TIERS.UNCOMMON.requiredLevel;
+    } else if (currentLevel < RARITY_TIERS.RARE.requiredLevel) {
+        nextRarity = RARITY_TIERS.RARE;
+        nextThreshold = RARITY_TIERS.RARE.requiredLevel;
+    } else if (currentLevel < RARITY_TIERS.EPIC.requiredLevel) {
+        nextRarity = RARITY_TIERS.EPIC;
+        nextThreshold = RARITY_TIERS.EPIC.requiredLevel;
+    } else if (currentLevel < RARITY_TIERS.LEGENDARY.requiredLevel) {
+        nextRarity = RARITY_TIERS.LEGENDARY;
+        nextThreshold = RARITY_TIERS.LEGENDARY.requiredLevel;
+    } else if (currentLevel < RARITY_TIERS.MYTHICAL.requiredLevel) {
+        nextRarity = RARITY_TIERS.MYTHICAL;
+        nextThreshold = RARITY_TIERS.MYTHICAL.requiredLevel;
+    }
+
+    const progressContainer = $('<div class="rarity-progress">');
+
+    if (nextRarity) {
+        const prevThreshold = currentRarity.requiredLevel;
+        const range = nextThreshold - prevThreshold;
+        const progress = currentLevel - prevThreshold;
+        const percentage = Math.min(100, (progress / range) * 100);
+
+        const progressBarOuter = $('<div class="progress-bar-outer">');
+        const progressBarInner = $('<div class="progress-bar-inner">').css({
+            'width': percentage + '%',
+            'background': `linear-gradient(90deg, ${currentRarity.color}, ${nextRarity.color})`
+        });
+
+        const progressText = $('<div class="progress-text">').text(
+            `${currentLevel}/${nextThreshold} to ${nextRarity.name}`
+        );
+
+        progressBarOuter.append(progressBarInner);
+        progressContainer.append(progressBarOuter, progressText);
+    } else {
+        const progressText = $('<div class="progress-text">').text('Maximum Rarity!').css('color', '#FFD700');
+        progressContainer.append(progressText);
+    }
+
+    return progressContainer;
 }
 
 // Render upgrades list
@@ -687,6 +830,20 @@ function resetGame() {
 // Initialize game
 function initGame() {
     console.log('🌑 Eldritch Excavation - Initializing...');
+
+    // Initialize tools if not already set (all start at level 0)
+    if (Object.keys(gameState.tools).length === 0) {
+        GAME_DATA.tools.forEach(tool => {
+            gameState.tools[tool.id] = 0;
+        });
+    }
+
+    // Initialize missions if not already set
+    if (Object.keys(gameState.missions).length === 0) {
+        GAME_DATA.missions.forEach(mission => {
+            gameState.missions[mission.id] = false;
+        });
+    }
 
     // Try to load saved game
     const loaded = loadGame();

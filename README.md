@@ -9,35 +9,52 @@ Delve into the unknowable depths and excavate real-world minerals and gemstones,
 ## ✨ Features
 
 ### 🪨 Real-World Mineral Progression
-- 16 tiers of minerals from Iron to Voidstone
-- Real metals, precious metals, and gemstones
+- **35 tiers** of minerals from Iron to Azathoth's Core
+- Real metals (Iron, Copper, Lead, Nickel, Aluminum)
+- Precious metals (Silver, Gold, Platinum, Palladium, Rhodium, Iridium, Osmium)
+- Gemstones (Garnet, Amethyst, Ruby, Sapphire, Emerald, Diamond, Alexandrite)
+- Rare minerals (Painite, Benitoite, Taaffeite, Meteorite, Obsidian, Moldavite)
+- Eldritch materials (Voidstone, Star-Metal, Dark Matter, Time Crystal, Reality Shard, Elder Essence)
 - Each ore has unique descriptions and colors
-- Realistic value scaling (no quadrillions!)
 
-### 👾 Lovecraft-Themed Tools
-- 10 automated workers inspired by H.P. Lovecraft's mythos:
-  - Cultist Miners
-  - Shoggoth Workers
-  - Deep One Excavators
-  - Night-gaunt Haulers
-  - Byakhee Transports
-  - Star-spawn Overseers
-  - Elder God Fragments
-  - Azathoth's Dream
-  - Yog-Sothoth Gates
-  - Cthulhu's Blessing
+### 👾 Lovecraft-Themed Tools with Rarity System
+- **25 automated workers** inspired by H.P. Lovecraft's mythos
+- **Level System**: Each tool can reach **Level 256 maximum**
+- **6 Rarity Tiers** with bonus production:
+  - 🤍 **Common** (Lv 0-24): Base production
+  - 💚 **Uncommon** (Lv 25-49): 1.5x production bonus
+  - 💙 **Rare** (Lv 50-99): 2x production bonus
+  - 💜 **Epic** (Lv 100-149): 3x production bonus
+  - 🧡 **Legendary** (Lv 150-199): 5x production bonus
+  - ✨ **Mythical** (Lv 200-256): 10x production bonus
+- **Progressive Unlocking**: Each tool unlocks when the previous reaches Epic (Level 100)
+- **Tool Progression**:
+  - Early: Cultist Miners, Ghouls, Shoggoths, Deep Ones, Mi-Go
+  - Mid: Night-gaunts, Hounds of Tindalos, Flying Polyps, Byakhee, Shantak-birds
+  - Late: Formless Spawn, Star-spawn, Servitors, Colors Out of Space
+  - End-game: Elder Things, Moon-Beasts, Nyarlathotep, Dagon, Hastur, Shub-Niggurath
+  - Ultimate: Yog-Sothoth, Azathoth, Cthulhu, Court of Outer Gods
 
 ### ⚡ Progression Systems
-- **Click Upgrades**: Multiply your clicking power
-- **Production Upgrades**: Boost passive ore generation
-- **Auto-Clickers**: Automatic clicking while you idle
-- **Relics**: Powerful permanent artifacts with unique bonuses
-- **Prestige System**: Reset for "Madness" currency and permanent upgrades
+- **Click Upgrades**: 15 tiers doubling/tripling click power
+- **Production Upgrades**: 15 tiers boosting passive generation
+- **Auto-Clickers**: 10 tiers adding automatic clicks
+- **Tool Efficiency**: 10 tiers multiplying worker production
+- **Global Multipliers**: 10 tiers boosting all ore gain
+- **60+ total upgrades** across 5 categories
+- **Relics**: 25 powerful permanent artifacts (persist through prestige!)
+- **Prestige System**: Reset for "Madness" currency with 40 permanent upgrades
 
 ### 📜 Missions
-- 14 unique missions with various requirements
-- Rewards include ore and madness
-- Track your achievements and progress
+- **50 unique missions** across multiple categories:
+  - Click milestones (10 → 1,000,000 clicks)
+  - Ore collection (500 → 5 trillion total ore)
+  - Tool purchases (1 → 25,000 workers)
+  - Upgrade milestones (3 → 60 upgrades)
+  - Relic collection (1 → all 25 relics)
+  - Prestige progression (1 → 100 prestiges)
+  - Ore tier unlocks (Copper → Azathoth's Core)
+- Rewards include ore and madness bonuses
 
 ### 💾 Quality of Life
 - Auto-save every 30 seconds
@@ -76,12 +93,16 @@ The game features a dark, cosmic horror aesthetic inspired by H.P. Lovecraft's w
 
 ## 📊 Game Balance
 
-The game uses realistic number scaling:
-- Numbers grow from 1 to millions/billions
-- No need for scientific notation or made-up units
-- Balanced progression curve
-- Prestige available after reaching 1M+ total ore
-- Each prestige gives meaningful permanent bonuses
+The game is balanced for **approximately 24 hours** of active/idle gameplay:
+- Numbers grow from 1 to decillions (1e33+)
+- Notation: K, M, B, T, Qa, Qi, Sx, Sp, Oc, No, Dc, UDc
+- Early game (0-2 hours): Manual clicking, first tools, basic upgrades
+- Mid game (2-8 hours): Automation builds, precious metals, relics
+- Late game (8-20 hours): Gemstones, rare minerals, multiple prestiges
+- End game (20-24 hours): Eldritch materials, ultimate relics, prestige mastery
+- First prestige recommended at ~500K+ total ore for meaningful madness gain
+- Each prestige provides exponentially growing bonuses
+- Relics persist through prestige, making them extremely valuable
 
 ## 🚀 Getting Started
 
