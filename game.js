@@ -1,5 +1,8 @@
 // Eldritch Excavation - Main Game Logic
 
+// Global flag to prevent saves during reset
+let isResetting = false;
+
 // Game State
 const gameState = {
     ore: 0,
@@ -209,12 +212,12 @@ function buyTool(toolId, levels = 1) {
     const tool = GameDataHelper.getTool(toolId);
     if (!tool) return false;
 
-    // Check if tool is unlocked
-    if (!GameDataHelper.isToolUnlocked(toolId, gameState.tools)) {
+    const currentLevel = gameState.tools[toolId];
+
+    // Check if tool is unlocked ONLY if it's at level 0 (first purchase)
+    if (currentLevel === 0 && !GameDataHelper.isToolUnlocked(toolId, gameState.tools)) {
         return false;
     }
-
-    const currentLevel = gameState.tools[toolId];
 
     // Can't exceed max level
     if (currentLevel >= MAX_TOOL_LEVEL) return false;
@@ -781,6 +784,12 @@ function renderAllLists() {
 
 // Save game
 function saveGame() {
+    // Don't save if we're in the middle of resetting
+    if (isResetting) {
+        console.log('Save blocked - reset in progress');
+        return;
+    }
+
     const saveData = {
         version: '1.0',
         state: gameState
@@ -823,7 +832,13 @@ function resetGame() {
         return;
     }
 
+    // Set flag to prevent auto-save during reset
+    isResetting = true;
+
+    // Clear localStorage
     localStorage.removeItem('eldritchExcavation_save');
+
+    // Reload immediately (auto-save is now blocked by isResetting flag)
     location.reload();
 }
 
