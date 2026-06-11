@@ -482,9 +482,99 @@ function updateUI() {
     // Enable/disable prestige button
     $('#prestige-btn').prop('disabled', madnessGain <= 0);
 
-    // Update crystal color
+    // Update crystal color (kept for backward compatibility)
     $('.crystal-core').css('color', currentOre.color);
     $('.crystal-glow').css('background', `radial-gradient(circle, ${currentOre.color}40 0%, transparent 70%)`);
+
+    // Update theme colors based on current ore
+    updateThemeColor(currentOre.color);
+
+    // Update button states (enable/disable based on resources)
+    updateButtonStates();
+}
+
+// Update global theme color based on ore
+function updateThemeColor(oreColor) {
+    // Convert hex to rgba for glow effect
+    const r = parseInt(oreColor.slice(1, 3), 16);
+    const g = parseInt(oreColor.slice(3, 5), 16);
+    const b = parseInt(oreColor.slice(5, 7), 16);
+    const oreGlow = `rgba(${r}, ${g}, ${b}, 0.3)`;
+
+    // Update CSS custom properties
+    document.documentElement.style.setProperty('--ore-color', oreColor);
+    document.documentElement.style.setProperty('--ore-glow', oreGlow);
+}
+
+// Update button states based on current resources
+function updateButtonStates() {
+    // Update tool buy buttons
+    GAME_DATA.tools.forEach(tool => {
+        const level = gameState.tools[tool.id];
+        const isMaxed = level >= MAX_TOOL_LEVEL;
+
+        if (!isMaxed) {
+            // Find the +1 button for this tool
+            const cost1 = GameDataHelper.getToolCost(tool.id, level);
+            $(`#tools-list .tool-card`).each(function() {
+                const cardText = $(this).find('.item-name').text();
+                if (cardText.includes(tool.name)) {
+                    $(this).find('.buy-btn').first().prop('disabled', gameState.ore < cost1);
+
+                    // +10 button
+                    let cost10 = 0;
+                    const maxLevels = Math.min(10, MAX_TOOL_LEVEL - level);
+                    for (let i = 0; i < maxLevels; i++) {
+                        cost10 += GameDataHelper.getToolCost(tool.id, level + i);
+                    }
+                    $(this).find('.buy-btn').eq(1).prop('disabled', gameState.ore < cost10 || maxLevels === 0);
+                }
+            });
+        }
+    });
+
+    // Update upgrade buy buttons
+    GAME_DATA.upgrades.forEach(upgrade => {
+        const owned = gameState.upgrades.includes(upgrade.id);
+        const locked = upgrade.requirement && !gameState.upgrades.includes(upgrade.requirement);
+
+        if (!owned && !locked) {
+            $(`#upgrades-list .item-card`).each(function() {
+                const cardText = $(this).find('.item-name').text();
+                if (cardText === upgrade.name) {
+                    $(this).find('.buy-btn').prop('disabled', gameState.ore < upgrade.cost);
+                }
+            });
+        }
+    });
+
+    // Update relic buy buttons
+    GAME_DATA.relics.forEach(relic => {
+        const owned = gameState.relics.includes(relic.id);
+
+        if (!owned) {
+            $(`#relics-list .item-card`).each(function() {
+                const cardText = $(this).find('.item-name').text();
+                if (cardText.includes(relic.name)) {
+                    $(this).find('.buy-btn').prop('disabled', gameState.ore < relic.cost);
+                }
+            });
+        }
+    });
+
+    // Update prestige upgrade buy buttons
+    GAME_DATA.prestigeUpgrades.forEach(upgrade => {
+        const owned = gameState.prestigeUpgrades.includes(upgrade.id);
+
+        if (!owned) {
+            $(`#prestige-upgrades-list .item-card`).each(function() {
+                const cardText = $(this).find('.item-name').text();
+                if (cardText === upgrade.name) {
+                    $(this).find('.buy-btn').prop('disabled', gameState.madness < upgrade.cost);
+                }
+            });
+        }
+    });
 }
 
 // Render tools list

@@ -1,18 +1,23 @@
 /* Eldritch Excavation - Lovecraftian Dark Theme */
 
 :root {
-    --bg-dark: #0a0a0f;
-    --bg-panel: #1a1a24;
-    --bg-panel-light: #252535;
-    --border-color: #3a3a4a;
-    --text-primary: #e0e0e8;
-    --text-secondary: #a0a0b0;
+    /* Darker base colors - ultra dark theme */
+    --bg-dark: #020204;
+    --bg-panel: #06060a;
+    --bg-panel-light: #0a0a10;
+    --border-color: #1a1a20;
+    --text-primary: #c0c0c8;
+    --text-secondary: #707080;
     --accent-purple: #6842ff;
     --accent-teal: #00d4aa;
     --accent-gold: #ffd700;
     --accent-red: #ff4444;
     --glow-purple: rgba(104, 66, 255, 0.3);
     --glow-teal: rgba(0, 212, 170, 0.3);
+
+    /* Dynamic ore color (updated by JS based on current ore) */
+    --ore-color: #8B7355;
+    --ore-glow: rgba(139, 115, 85, 0.3);
 }
 
 * {
@@ -23,84 +28,93 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, var(--bg-dark) 0%, #1a0a1f 100%);
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--ore-color) 5%, var(--bg-dark) 100%);
     color: var(--text-primary);
     overflow-x: hidden;
     min-height: 100vh;
+    transition: background 2s ease-in-out;
 }
 
 #game-container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 12px;
 }
 
 /* Header */
 #game-header {
     text-align: center;
-    padding: 20px;
+    padding: 12px;
     background: var(--bg-panel);
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
-    margin-bottom: 20px;
-    box-shadow: 0 0 20px var(--glow-purple);
+    border: 1px solid var(--ore-color);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    box-shadow: 0 0 20px var(--ore-glow);
+    transition: border-color 2s ease-in-out, box-shadow 2s ease-in-out;
 }
 
 #game-header h1 {
-    font-size: 2.5em;
-    color: var(--accent-purple);
-    text-shadow: 0 0 10px var(--glow-purple);
+    font-size: 2em;
+    color: var(--ore-color);
+    text-shadow: 0 0 10px var(--ore-glow);
     letter-spacing: 2px;
+    transition: color 2s ease-in-out, text-shadow 2s ease-in-out;
 }
 
 .subtitle {
     color: var(--text-secondary);
     font-style: italic;
-    font-size: 1.1em;
-    margin-top: 5px;
+    font-size: 0.9em;
+    margin-top: 3px;
 }
 
 /* Main Game Layout */
 #main-game {
     display: grid;
-    grid-template-columns: 300px 1fr 400px;
-    gap: 20px;
-    margin-bottom: 20px;
+    grid-template-columns: 260px 1fr 360px;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
 .panel {
     background: var(--bg-panel);
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    transition: border-color 2s ease-in-out;
+}
+
+.panel:hover {
+    border-color: var(--ore-color);
 }
 
 /* Left Panel Stats */
 #left-panel {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
 }
 
 .stat-box {
     background: var(--bg-panel-light);
-    padding: 15px;
-    border-radius: 8px;
+    padding: 10px;
+    border-radius: 4px;
     border: 1px solid var(--border-color);
 }
 
 .stat-box h3 {
-    color: var(--accent-teal);
-    margin-bottom: 10px;
-    font-size: 1.1em;
+    color: var(--ore-color);
+    margin-bottom: 8px;
+    font-size: 0.95em;
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 5px;
+    padding-bottom: 4px;
+    transition: color 2s ease-in-out;
 }
 
 .stat-box p {
-    margin: 5px 0;
-    font-size: 0.95em;
+    margin: 4px 0;
+    font-size: 0.9em;
 }
 
 .label {
@@ -109,13 +123,14 @@ body {
 }
 
 .ore-name {
-    font-size: 1.2em;
-    color: var(--accent-gold);
+    font-size: 1.1em;
+    color: var(--ore-color);
     font-weight: bold;
+    transition: color 2s ease-in-out;
 }
 
 .ore-desc {
-    font-size: 0.85em;
+    font-size: 0.8em;
     font-style: italic;
     color: var(--text-secondary);
 }
@@ -143,6 +158,14 @@ body {
     position: relative;
     cursor: pointer;
     transition: transform 0.1s ease;
+    /* Prevent white flash on click */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    outline: none;
 }
 
 #ore-crystal:hover {
@@ -151,6 +174,10 @@ body {
 
 #ore-crystal:active {
     transform: scale(0.95);
+}
+
+#ore-crystal:focus {
+    outline: none;
 }
 
 #ore-crystal.clicked .crystal-core {
@@ -166,9 +193,10 @@ body {
 .crystal-glow {
     position: absolute;
     inset: -20px;
-    background: radial-gradient(circle, var(--glow-purple) 0%, transparent 70%);
+    background: radial-gradient(circle, var(--ore-glow) 0%, transparent 70%);
     animation: pulse 2s ease-in-out infinite;
     border-radius: 50%;
+    transition: background 2s ease-in-out;
 }
 
 .crystal-core {
@@ -178,9 +206,10 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 180px;
-    color: var(--accent-purple);
-    text-shadow: 0 0 30px var(--glow-purple);
-    filter: drop-shadow(0 0 20px var(--accent-purple));
+    color: var(--ore-color);
+    text-shadow: 0 0 30px var(--ore-glow);
+    filter: drop-shadow(0 0 20px var(--ore-color));
+    transition: color 2s ease-in-out, text-shadow 2s ease-in-out, filter 2s ease-in-out;
 }
 
 @keyframes pulse {
@@ -211,9 +240,13 @@ body {
     position: absolute;
     font-size: 1.5em;
     font-weight: bold;
-    color: var(--accent-gold);
+    color: white;
     animation: float-up 1s ease-out forwards;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+    text-shadow:
+        0 0 20px var(--ore-color),
+        0 0 40px var(--ore-color),
+        0 2px 4px rgba(0, 0, 0, 0.8);
+    transition: text-shadow 0.3s ease-in-out;
 }
 
 @keyframes float-up {
@@ -224,35 +257,36 @@ body {
 /* Right Panel - Tabs */
 .tab-navigation {
     display: flex;
-    gap: 5px;
-    margin-bottom: 15px;
+    gap: 4px;
+    margin-bottom: 10px;
     flex-wrap: wrap;
 }
 
 .tab-btn {
     flex: 1;
-    min-width: 80px;
-    padding: 10px 5px;
+    min-width: 70px;
+    padding: 8px 4px;
     background: var(--bg-panel-light);
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 0.9em;
+    font-size: 0.85em;
     font-weight: bold;
 }
 
 .tab-btn:hover {
     background: var(--border-color);
     color: var(--text-primary);
+    border-color: var(--ore-color);
 }
 
 .tab-btn.active {
-    background: var(--accent-purple);
-    border-color: var(--accent-purple);
+    background: var(--ore-color);
+    border-color: var(--ore-color);
     color: white;
-    box-shadow: 0 0 10px var(--glow-purple);
+    box-shadow: 0 0 10px var(--ore-glow);
 }
 
 .tab-content {
@@ -264,63 +298,65 @@ body {
 }
 
 .tab-content h3 {
-    color: var(--accent-teal);
-    margin-bottom: 10px;
-    font-size: 1.2em;
+    color: var(--ore-color);
+    margin-bottom: 8px;
+    font-size: 1em;
+    transition: color 2s ease-in-out;
 }
 
 .tab-description {
     color: var(--text-secondary);
     font-style: italic;
-    font-size: 0.9em;
-    margin-bottom: 15px;
-    padding: 10px;
+    font-size: 0.8em;
+    margin-bottom: 10px;
+    padding: 8px;
     background: var(--bg-panel-light);
-    border-radius: 5px;
+    border-radius: 4px;
 }
 
 /* Item Lists */
 .item-list {
     max-height: 500px;
     overflow-y: auto;
-    padding-right: 5px;
+    padding-right: 4px;
 }
 
 .item-list::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .item-list::-webkit-scrollbar-track {
     background: var(--bg-panel-light);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .item-list::-webkit-scrollbar-thumb {
     background: var(--border-color);
-    border-radius: 4px;
+    border-radius: 3px;
+    transition: background 0.3s ease;
 }
 
 .item-list::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-purple);
+    background: var(--ore-color);
 }
 
 /* Tool/Upgrade/Relic Cards */
 .item-card {
     background: var(--bg-panel-light);
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 6px;
     transition: all 0.3s ease;
 }
 
 .item-card:hover {
-    border-color: var(--accent-purple);
-    box-shadow: 0 0 10px var(--glow-purple);
+    border-color: var(--ore-color);
+    box-shadow: 0 0 10px var(--ore-glow);
 }
 
 .item-card.locked {
-    opacity: 0.5;
+    opacity: 0.4;
     pointer-events: none;
 }
 
@@ -332,93 +368,96 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .item-name {
     font-weight: bold;
-    color: var(--accent-teal);
-    font-size: 1em;
+    color: var(--ore-color);
+    font-size: 0.9em;
+    transition: color 2s ease-in-out;
 }
 
 .item-level {
     color: var(--text-secondary);
-    font-size: 0.9em;
+    font-size: 0.8em;
 }
 
 .item-description {
     color: var(--text-secondary);
-    font-size: 0.85em;
-    margin-bottom: 8px;
-    line-height: 1.4;
+    font-size: 0.75em;
+    margin-bottom: 6px;
+    line-height: 1.3;
 }
 
 .item-stats {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 8px;
+    margin-top: 6px;
 }
 
 .item-production {
-    color: var(--accent-gold);
-    font-size: 0.9em;
+    color: var(--ore-color);
+    font-size: 0.8em;
     font-weight: bold;
+    transition: color 2s ease-in-out;
 }
 
 .item-cost {
     color: var(--text-primary);
-    font-size: 0.9em;
+    font-size: 0.8em;
 }
 
 .buy-btn {
     width: 100%;
-    padding: 8px;
-    margin-top: 8px;
-    background: var(--accent-purple);
+    padding: 6px;
+    margin-top: 6px;
+    background: var(--ore-color);
     border: none;
-    border-radius: 5px;
+    border-radius: 4px;
     color: white;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease, background-color 2s ease-in-out;
+    font-size: 0.85em;
 }
 
 .buy-btn:hover {
-    background: #8668ff;
-    box-shadow: 0 0 15px var(--glow-purple);
+    filter: brightness(1.2);
+    box-shadow: 0 0 15px var(--ore-glow);
 }
 
 .buy-btn:disabled {
-    background: #3a3a4a;
-    color: #666;
+    background: #2a2a3a;
+    color: #555;
     cursor: not-allowed;
     box-shadow: none;
 }
 
 /* Action Buttons */
 .action-btn {
-    padding: 12px 24px;
-    background: var(--accent-teal);
-    border: 2px solid var(--accent-teal);
-    border-radius: 8px;
+    padding: 10px 20px;
+    background: var(--ore-color);
+    border: 1px solid var(--ore-color);
+    border-radius: 6px;
     color: white;
     font-weight: bold;
-    font-size: 1em;
+    font-size: 0.9em;
     cursor: pointer;
-    transition: all 0.3s ease;
-    margin-top: 10px;
+    transition: all 0.3s ease, background-color 2s ease-in-out, border-color 2s ease-in-out;
+    margin-top: 8px;
 }
 
 .action-btn:hover {
-    background: transparent;
-    box-shadow: 0 0 15px var(--glow-teal);
+    filter: brightness(1.2);
+    box-shadow: 0 0 15px var(--ore-glow);
 }
 
 .action-btn:disabled {
-    background: #3a3a4a;
-    border-color: #3a3a4a;
-    color: #666;
+    background: #2a2a3a;
+    border-color: #2a2a3a;
+    color: #555;
     cursor: not-allowed;
     box-shadow: none;
 }
@@ -436,40 +475,42 @@ body {
 
 .prestige-info {
     background: var(--bg-panel-light);
-    padding: 15px;
-    border-radius: 8px;
-    margin: 15px 0;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
 }
 
 .prestige-info p {
-    margin: 5px 0;
+    margin: 4px 0;
+    font-size: 0.9em;
 }
 
 /* Footer */
 #game-footer {
     display: flex;
     justify-content: center;
-    gap: 15px;
-    padding: 15px;
+    gap: 10px;
+    padding: 10px;
     background: var(--bg-panel);
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
 }
 
 .footer-btn {
-    padding: 10px 20px;
+    padding: 8px 16px;
     background: var(--bg-panel-light);
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
     color: var(--text-primary);
     font-weight: bold;
     cursor: pointer;
     transition: all 0.3s ease;
+    font-size: 0.85em;
 }
 
 .footer-btn:hover {
-    border-color: var(--accent-purple);
-    box-shadow: 0 0 10px var(--glow-purple);
+    border-color: var(--ore-color);
+    box-shadow: 0 0 10px var(--ore-glow);
 }
 
 /* Modal */
@@ -578,63 +619,64 @@ button, .item-card {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-purple);
+    background: var(--ore-color);
 }
 
 /* Hover effects for better feedback */
 .item-card:not(.locked):hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 /* Selection styling */
 ::selection {
-    background: var(--accent-purple);
+    background: var(--ore-color);
     color: white;
 }
 
 /* Focus outline */
 button:focus-visible,
 input:focus-visible {
-    outline: 2px solid var(--accent-purple);
+    outline: 2px solid var(--ore-color);
     outline-offset: 2px;
 }
 
 /* Rarity Progress Bar */
 .rarity-progress {
-    margin: 10px 0;
+    margin: 6px 0;
 }
 
 .progress-bar-outer {
     width: 100%;
-    height: 8px;
+    height: 6px;
     background: var(--bg-panel-light);
-    border-radius: 4px;
+    border-radius: 3px;
     overflow: hidden;
     border: 1px solid var(--border-color);
 }
 
 .progress-bar-inner {
     height: 100%;
-    transition: width 0.3s ease;
-    border-radius: 4px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: 3px;
 }
 
 .progress-text {
-    font-size: 0.8em;
+    font-size: 0.7em;
     text-align: center;
-    margin-top: 4px;
+    margin-top: 3px;
     color: var(--text-secondary);
 }
 
 /* Tool Card Enhancements */
 .tool-card.locked {
     opacity: 0.4;
-    border-color: #FF4444;
+    border-color: #AA3333;
 }
 
 .tool-card.maxed {
-    border-color: #FFD700;
-    background: linear-gradient(135deg, var(--bg-panel-light) 0%, rgba(255, 215, 0, 0.1) 100%);
+    border-color: var(--ore-color);
+    background: linear-gradient(135deg, var(--bg-panel-light) 0%, var(--ore-glow) 100%);
+    transition: background 2s ease-in-out, border-color 2s ease-in-out;
 }
 
 /* Rarity Colors (already in tool name, but add glow for higher rarities) */
