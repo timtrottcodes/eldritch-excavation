@@ -462,7 +462,7 @@ function gameLoop() {
 function updateUI() {
     const currentOre = GAME_DATA.ores[gameState.currentOreIndex];
 
-    // Update stats
+    // Update desktop stats
     $('#current-ore').text(currentOre.name).css('color', currentOre.color);
     $('#ore-description').text(currentOre.description);
     $('#ore-count').text(formatNumber(gameState.ore));
@@ -473,14 +473,20 @@ function updateUI() {
     $('#total-clicks').text(formatNumber(gameState.totalClicks));
     $('#total-ore').text(formatNumber(gameState.totalOre));
 
-    // Update prestige info
-    const madnessGain = calculateMadnessGain();
-    $('#madness-on-prestige').text(formatNumber(madnessGain));
-    const madnessMult = 1 + (gameState.prestiges * 0.1);
-    $('#madness-multiplier').text(madnessMult.toFixed(1) + 'x');
+    // Update mobile stats bar
+    $('#mobile-ore-count').text(formatNumber(gameState.ore));
+    $('#mobile-current-ore').text(currentOre.name.split(' ')[0]); // Just first word (e.g., "Iron")
+    $('#mobile-ore-per-second').text(formatNumber(gameState.orePerSecond));
+    $('#mobile-madness-count').text(formatNumber(gameState.madness));
 
-    // Enable/disable prestige button
-    $('#prestige-btn').prop('disabled', madnessGain <= 0);
+    // Update prestige info (both desktop and mobile)
+    const madnessGain = calculateMadnessGain();
+    $('#madness-on-prestige, #mobile-madness-on-prestige').text(formatNumber(madnessGain));
+    const madnessMult = 1 + (gameState.prestiges * 0.1);
+    $('#madness-multiplier, #mobile-madness-multiplier').text(madnessMult.toFixed(1) + 'x');
+
+    // Enable/disable prestige button (both desktop and mobile)
+    $('#prestige-btn, #mobile-prestige-btn').prop('disabled', madnessGain <= 0);
 
     // Update crystal color (kept for backward compatibility)
     $('.crystal-core').css('color', currentOre.color);
@@ -580,7 +586,9 @@ function updateButtonStates() {
 // Render tools list
 function renderTools() {
     const container = $('#tools-list');
+    const mobileContainer = $('#mobile-tools-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.tools.forEach(tool => {
         const level = gameState.tools[tool.id];
@@ -678,6 +686,7 @@ function renderTools() {
         }
 
         container.append(card);
+        mobileContainer.append(card.clone(true)); // Clone with events for mobile
     });
 }
 
@@ -737,7 +746,9 @@ function createRarityProgressBar(currentLevel) {
 // Render upgrades list
 function renderUpgrades() {
     const container = $('#upgrades-list');
+    const mobileContainer = $('#mobile-upgrades-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.upgrades.forEach(upgrade => {
         const owned = gameState.upgrades.includes(upgrade.id);
@@ -766,13 +777,16 @@ function renderUpgrades() {
 
         card.append(header, description, buyBtn);
         container.append(card);
+        mobileContainer.append(card.clone(true));
     });
 }
 
 // Render relics list
 function renderRelics() {
     const container = $('#relics-list');
+    const mobileContainer = $('#mobile-relics-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.relics.forEach(relic => {
         const owned = gameState.relics.includes(relic.id);
@@ -797,13 +811,16 @@ function renderRelics() {
 
         card.append(header, description, buyBtn);
         container.append(card);
+        mobileContainer.append(card.clone(true));
     });
 }
 
 // Render prestige upgrades list
 function renderPrestigeUpgrades() {
     const container = $('#prestige-upgrades-list');
+    const mobileContainer = $('#mobile-prestige-upgrades-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.prestigeUpgrades.forEach(upgrade => {
         const owned = gameState.prestigeUpgrades.includes(upgrade.id);
@@ -832,13 +849,16 @@ function renderPrestigeUpgrades() {
 
         card.append(header, description, buyBtn);
         container.append(card);
+        mobileContainer.append(card.clone(true));
     });
 }
 
 // Render missions list
 function renderMissions() {
     const container = $('#missions-list');
+    const mobileContainer = $('#mobile-missions-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.missions.forEach(mission => {
         const completed = gameState.missions[mission.id];
@@ -860,6 +880,7 @@ function renderMissions() {
 
         card.append(header, description, reward);
         container.append(card);
+        mobileContainer.append(card.clone(true));
     });
 }
 
@@ -971,12 +992,61 @@ function initGame() {
     console.log('🌑 Eldritch Excavation - Ready!');
 }
 
+// Set up mobile drawer functionality
+function setupMobileDrawer() {
+    const drawer = $('#mobile-drawer');
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+
+    // Initially closed
+    drawer.addClass('drawer-closed');
+
+    // Handle tap/click
+    $('#drawer-handle').on('click', function(e) {
+        if (!isDragging) {
+            drawer.toggleClass('drawer-open drawer-closed');
+        }
+    });
+
+    // Handle touch drag
+    $('#drawer-handle').on('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+        isDragging = false;
+    });
+
+    $('#drawer-handle').on('touchmove', function(e) {
+        currentY = e.touches[0].clientY;
+        const deltaY = currentY - startY;
+
+        if (Math.abs(deltaY) > 10) {
+            isDragging = true;
+            e.preventDefault();
+        }
+    });
+
+    $('#drawer-handle').on('touchend', function(e) {
+        if (isDragging) {
+            const deltaY = currentY - startY;
+
+            if (deltaY > 50) {
+                // Swipe down - close drawer
+                drawer.removeClass('drawer-open').addClass('drawer-closed');
+            } else if (deltaY < -50) {
+                // Swipe up - open drawer
+                drawer.removeClass('drawer-closed').addClass('drawer-open');
+            }
+        }
+        isDragging = false;
+    });
+}
+
 // Set up event listeners
 function setupEventListeners() {
     // Main click
     $('#ore-crystal').on('click', handleClick);
 
-    // Tab navigation
+    // Desktop tab navigation
     $('.tab-btn').on('click', function() {
         const tabName = $(this).data('tab');
 
@@ -992,10 +1062,33 @@ function setupEventListeners() {
         renderAllLists();
     });
 
-    // Prestige button
-    $('#prestige-btn').on('click', prestige);
+    // Mobile tab navigation
+    $('.mobile-tab-btn').on('click', function() {
+        const tabName = $(this).data('tab');
 
-    // Footer buttons
+        // Update buttons
+        $('.mobile-tab-btn').removeClass('active');
+        $(this).addClass('active');
+
+        // Update content
+        $('.mobile-tab-content').removeClass('active');
+        $(`#mobile-${tabName}-tab`).addClass('active');
+
+        // Update drawer handle text
+        const tabText = $(this).text().trim();
+        $('#drawer-current-tab').text(tabText);
+
+        // Re-render the active tab
+        renderAllLists();
+    });
+
+    // Mobile drawer toggle
+    setupMobileDrawer();
+
+    // Prestige button (both desktop and mobile)
+    $('#prestige-btn, #mobile-prestige-btn').on('click', prestige);
+
+    // Desktop footer buttons
     $('#save-btn').on('click', () => {
         saveGame();
         showNotification('Game saved manually!');
@@ -1006,6 +1099,18 @@ function setupEventListeners() {
     });
 
     $('#reset-btn').on('click', resetGame);
+
+    // Mobile footer buttons
+    $('#mobile-save-btn').on('click', () => {
+        saveGame();
+        showNotification('Game saved manually!');
+    });
+
+    $('#mobile-settings-btn').on('click', () => {
+        $('#settings-modal').removeClass('hidden');
+    });
+
+    $('#mobile-reset-btn').on('click', resetGame);
 
     // Settings modal
     $('#close-settings').on('click', () => {

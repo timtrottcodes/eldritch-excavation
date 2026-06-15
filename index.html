@@ -15,16 +15,36 @@
             <p class="subtitle">Unearth the Unknowable Depths</p>
         </header>
 
+        <!-- Mobile Stats Bar (shown on mobile only) -->
+        <div id="mobile-stats-bar" class="mobile-only">
+            <div class="mobile-stat">
+                <span class="mobile-stat-label">Ore</span>
+                <span id="mobile-ore-count" class="mobile-stat-value">0</span>
+            </div>
+            <div class="mobile-stat">
+                <span class="mobile-stat-label">Current</span>
+                <span id="mobile-current-ore" class="mobile-stat-value">Iron</span>
+            </div>
+            <div class="mobile-stat">
+                <span class="mobile-stat-label">/sec</span>
+                <span id="mobile-ore-per-second" class="mobile-stat-value">0</span>
+            </div>
+            <div class="mobile-stat">
+                <span class="mobile-stat-label">Madness</span>
+                <span id="mobile-madness-count" class="mobile-stat-value">0</span>
+            </div>
+        </div>
+
         <!-- Main Game Area -->
         <div id="main-game">
-            <!-- Left Panel: Stats & Info -->
-            <div id="left-panel" class="panel">
+            <!-- Left Panel: Stats & Info (desktop only) -->
+            <div id="left-panel" class="panel desktop-only">
                 <div class="stat-box">
                     <h3>⛏️ Current Mine</h3>
                     <p id="current-ore" class="ore-name">Iron Ore</p>
                     <p id="ore-description" class="ore-desc">The first metal drawn from the earth...</p>
                 </div>
-                
+
                 <div class="stat-box">
                     <h3>💰 Resources</h3>
                     <p><span class="label">Ore:</span> <span id="ore-count">0</span></p>
@@ -59,8 +79,8 @@
                 <div id="damage-numbers"></div>
             </div>
 
-            <!-- Right Panel: Tabs -->
-            <div id="right-panel" class="panel">
+            <!-- Right Panel: Tabs (desktop only) -->
+            <div id="right-panel" class="panel desktop-only">
                 <div class="tab-navigation">
                     <button class="tab-btn active" data-tab="tools">⚒️ Tools</button>
                     <button class="tab-btn" data-tab="upgrades">⬆️ Upgrades</button>
@@ -110,12 +130,80 @@
             </div>
         </div>
 
-        <!-- Bottom Bar -->
-        <footer id="game-footer">
+        <!-- Mobile Bottom Drawer (mobile only) -->
+        <div id="mobile-drawer" class="mobile-only">
+            <!-- Drawer Handle -->
+            <div id="drawer-handle">
+                <div class="handle-bar"></div>
+                <span id="drawer-current-tab">⚒️ Tools</span>
+            </div>
+
+            <!-- Drawer Content -->
+            <div id="drawer-content">
+                <!-- Tab Navigation -->
+                <div class="mobile-tab-navigation">
+                    <button class="mobile-tab-btn active" data-tab="tools">⚒️<br>Tools</button>
+                    <button class="mobile-tab-btn" data-tab="upgrades">⬆️<br>Upgrades</button>
+                    <button class="mobile-tab-btn" data-tab="relics">🔮<br>Relics</button>
+                    <button class="mobile-tab-btn" data-tab="missions">📜<br>Missions</button>
+                    <button class="mobile-tab-btn" data-tab="prestige">🌟<br>Prestige</button>
+                </div>
+
+                <!-- Tab Content Area -->
+                <div class="mobile-tab-content-area">
+                    <!-- Tools Tab -->
+                    <div id="mobile-tools-tab" class="mobile-tab-content active">
+                        <h3>Excavation Tools</h3>
+                        <div id="mobile-tools-list" class="mobile-item-list"></div>
+                    </div>
+
+                    <!-- Upgrades Tab -->
+                    <div id="mobile-upgrades-tab" class="mobile-tab-content">
+                        <h3>Cursed Enhancements</h3>
+                        <div id="mobile-upgrades-list" class="mobile-item-list"></div>
+                    </div>
+
+                    <!-- Relics Tab -->
+                    <div id="mobile-relics-tab" class="mobile-tab-content">
+                        <h3>Forbidden Artifacts</h3>
+                        <p class="tab-description">Discover ancient relics that grant permanent power...</p>
+                        <div id="mobile-relics-list" class="mobile-item-list"></div>
+                    </div>
+
+                    <!-- Missions Tab -->
+                    <div id="mobile-missions-tab" class="mobile-tab-content">
+                        <h3>Eldritch Tasks</h3>
+                        <div id="mobile-missions-list" class="mobile-item-list"></div>
+                    </div>
+
+                    <!-- Prestige Tab -->
+                    <div id="mobile-prestige-tab" class="mobile-tab-content">
+                        <h3>Embrace the Madness</h3>
+                        <p class="tab-description">Reset your progress to gain permanent power from the void...</p>
+                        <div class="prestige-info">
+                            <p><span class="label">Madness on Prestige:</span> <span id="mobile-madness-on-prestige">0</span></p>
+                            <p><span class="label">Madness Multiplier:</span> <span id="mobile-madness-multiplier">1x</span></p>
+                        </div>
+                        <button id="mobile-prestige-btn" class="action-btn prestige-btn">Descend into Madness</button>
+                        <div id="mobile-prestige-upgrades-list" class="mobile-item-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Bar (desktop only) -->
+        <footer id="game-footer" class="desktop-only">
             <button id="save-btn" class="footer-btn">💾 Save</button>
             <button id="settings-btn" class="footer-btn">⚙️ Settings</button>
             <button id="reset-btn" class="footer-btn">🗑️ Reset</button>
         </footer>
+
+        <!-- Mobile Footer Buttons -->
+        <div id="mobile-footer" class="mobile-only">
+            <button id="mobile-save-btn" class="mobile-footer-btn">💾</button>
+            <button id="mobile-settings-btn" class="mobile-footer-btn">⚙️</button>
+            <button id="mobile-reset-btn" class="mobile-footer-btn">🗑️</button>
+        </div>
     </div>
 
     <!-- Settings Modal -->
