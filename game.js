@@ -176,6 +176,7 @@ function handleClick() {
     if (gameState.particles) {
         showDamageNumber(gameState.orePerClick);
         createClickEffect();
+        createClickParticles(); // Add particle effects
     }
 
     checkMissions();
@@ -205,6 +206,97 @@ function showDamageNumber(amount) {
 function createClickEffect() {
     $('#ore-crystal').addClass('clicked');
     setTimeout(() => $('#ore-crystal').removeClass('clicked'), 100);
+}
+
+// Create click particles based on ore tier
+function createClickParticles() {
+    // Check if particles are enabled
+    if (!gameState.particles) return;
+
+    const currentOreIndex = gameState.currentOreIndex;
+    const currentOre = GAME_DATA.ores[currentOreIndex];
+
+    // Determine particle type and count based on ore tier
+    let particleClass, particleSymbol, particleCount, energyLevel;
+
+    if (currentOreIndex < 7) {
+        // Common Metals (0-6): Dust
+        particleClass = 'particle-dust';
+        particleSymbol = 'particle-symbol-dust';
+        particleCount = 3 + Math.floor(Math.random() * 3); // 3-5 particles
+        energyLevel = 1;
+    } else if (currentOreIndex < 14) {
+        // Precious Metals (7-13): Rubble
+        particleClass = 'particle-rubble';
+        particleSymbol = 'particle-symbol-rubble';
+        particleCount = 4 + Math.floor(Math.random() * 4); // 4-7 particles
+        energyLevel = 1.2;
+    } else if (currentOreIndex < 21) {
+        // Gemstones (14-20): Small Sparks
+        particleClass = 'particle-spark-small';
+        particleSymbol = 'particle-symbol-spark';
+        particleCount = 5 + Math.floor(Math.random() * 4); // 5-8 particles
+        energyLevel = 1.5;
+    } else if (currentOreIndex < 28) {
+        // Rare Minerals (21-27): Medium Sparks
+        particleClass = 'particle-spark-medium';
+        particleSymbol = 'particle-symbol-star';
+        particleCount = 6 + Math.floor(Math.random() * 5); // 6-10 particles
+        energyLevel = 2;
+    } else {
+        // Eldritch Materials (28+): Intense Sparks
+        particleClass = 'particle-spark-intense';
+        particleSymbol = 'particle-symbol-energy';
+        particleCount = 8 + Math.floor(Math.random() * 7); // 8-14 particles
+        energyLevel = 3;
+    }
+
+    const container = $('#damage-numbers');
+
+    // For eldritch materials, add energy ring effect
+    if (currentOreIndex >= 28 && energyLevel >= 3) {
+        const ring = $('<div class="eldritch-ring">')
+            .css('color', currentOre.color);
+        container.append(ring);
+        setTimeout(() => ring.remove(), 600);
+    }
+
+    // Spawn particles
+    for (let i = 0; i < particleCount; i++) {
+        const particle = $('<div>')
+            .addClass('click-particle')
+            .addClass(particleClass)
+            .addClass(particleSymbol);
+
+        // Random explosion direction and distance
+        const angle = (Math.random() * 360) * (Math.PI / 180);
+        const distance = (50 + Math.random() * 100) * energyLevel;
+        const px = Math.cos(angle) * distance;
+        const py = Math.sin(angle) * distance;
+        const rotation = Math.random() * 720 - 360;
+
+        // Add slight color variation for visual interest
+        const colorVariation = 0.85 + Math.random() * 0.3; // 0.85 to 1.15
+
+        // Set CSS custom properties for animation
+        particle.css({
+            left: '50%',
+            top: '50%',
+            '--px': `${px}px`,
+            '--py': `${py}px`,
+            '--rotation': `${rotation}deg`,
+            color: currentOre.color,
+            filter: `brightness(${colorVariation})`
+        });
+
+        // Stagger particle creation slightly
+        setTimeout(() => {
+            container.append(particle);
+            // Remove after animation completes
+            const duration = energyLevel > 2 ? 900 : 800;
+            setTimeout(() => particle.remove(), duration);
+        }, i * 15); // 15ms delay between each particle
+    }
 }
 
 // Buy tool (level up)
@@ -488,6 +580,9 @@ function updateUI() {
     // Enable/disable prestige button (both desktop and mobile)
     $('#prestige-btn, #mobile-prestige-btn').prop('disabled', madnessGain <= 0);
 
+    // Update crystal SVG based on current ore
+    updateCrystalSVG(currentOre);
+
     // Update crystal color (kept for backward compatibility)
     $('.crystal-core').css('color', currentOre.color);
     $('.crystal-glow').css('background', `radial-gradient(circle, ${currentOre.color}40 0%, transparent 70%)`);
@@ -497,6 +592,17 @@ function updateUI() {
 
     // Update button states (enable/disable based on resources)
     updateButtonStates();
+}
+
+// Update crystal SVG display
+function updateCrystalSVG(currentOre) {
+    const crystalCore = $('.crystal-core');
+
+    // Generate SVG for current ore
+    const svgContent = CrystalSVG.generate(currentOre.id, currentOre.color, gameState.currentOreIndex);
+
+    // Replace the emoji symbol with SVG
+    crystalCore.html(svgContent);
 }
 
 // Update global theme color based on ore
@@ -1162,3 +1268,51 @@ $(document).ready(function() {
 $(window).on('beforeunload', function() {
     saveGame();
 });
+
+// Developer helper function to test particles at different ore tiers
+// Usage in console: testParticles(oreIndex)
+window.testParticles = function(oreIndex) {
+    if (oreIndex >= 0 && oreIndex < GAME_DATA.ores.length) {
+        gameState.currentOreIndex = oreIndex;
+        const ore = GAME_DATA.ores[oreIndex];
+        console.log(`Testing particles for: ${ore.name} (Tier ${oreIndex})`);
+        updateUI();
+        createClickParticles();
+    } else {
+        console.log(`Invalid ore index. Valid range: 0-${GAME_DATA.ores.length - 1}`);
+    }
+};
+
+// Developer helper to list all ore tiers
+window.listOres = function() {
+    console.log('Ore Tiers:');
+    GAME_DATA.ores.forEach((ore, index) => {
+        console.log(`${index}: ${ore.name} - ${ore.color}`);
+    });
+};
+
+// Developer helper to test crystal designs
+window.testCrystal = function(oreIndex) {
+    if (oreIndex >= 0 && oreIndex < GAME_DATA.ores.length) {
+        gameState.currentOreIndex = oreIndex;
+        const ore = GAME_DATA.ores[oreIndex];
+        console.log(`Displaying crystal for: ${ore.name} (Tier ${oreIndex})`);
+        updateUI();
+    } else {
+        console.log(`Invalid ore index. Valid range: 0-${GAME_DATA.ores.length - 1}`);
+    }
+};
+
+// Developer helper to cycle through all crystals
+window.cycleAllCrystals = function(delayMs = 2000) {
+    let index = 0;
+    const interval = setInterval(() => {
+        if (index >= GAME_DATA.ores.length) {
+            clearInterval(interval);
+            console.log('Crystal showcase complete!');
+            return;
+        }
+        testCrystal(index);
+        index++;
+    }, delayMs);
+};
