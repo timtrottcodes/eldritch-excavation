@@ -87,6 +87,7 @@
                     <button class="tab-btn" data-tab="relics">🔮 Relics</button>
                     <button class="tab-btn" data-tab="missions">📜 Missions</button>
                     <button class="tab-btn" data-tab="prestige">🌟 Prestige</button>
+                    <button class="tab-btn" data-tab="ascension" id="ascension-tab-btn" style="display:none;">🌌 Ascension</button>
                 </div>
 
                 <div class="tab-content-area">
@@ -125,6 +126,19 @@
                         </div>
                         <button id="prestige-btn" class="action-btn prestige-btn">Descend into Madness</button>
                         <div id="prestige-upgrades-list" class="item-list"></div>
+                    </div>
+
+                    <!-- Ascension Tab -->
+                    <div id="ascension-tab" class="tab-content">
+                        <h3>Transcend Reality</h3>
+                        <p class="tab-description">Reset ALL Madness to gain Cosmic Power - permanent bonuses across infinite prestiges...</p>
+                        <div class="ascension-info">
+                            <p><span class="label">Total Prestiges:</span> <span id="ascension-prestiges">0</span></p>
+                            <p><span class="label">Cosmic Power on Ascension:</span> <span id="cosmic-on-ascension">0</span></p>
+                            <p><span class="label">Current Cosmic Power:</span> <span id="cosmic-power">0</span></p>
+                        </div>
+                        <button id="ascension-btn" class="action-btn ascension-btn">Ascend Beyond</button>
+                        <div id="ascension-upgrades-list" class="item-list"></div>
                     </div>
                 </div>
             </div>
@@ -218,6 +232,8 @@
     </div>
 
     <script src="game-data.js"></script>
+    <script src="achievements-data.js"></script>
+    <script src="ascension-data.js"></script>
     <script src="crystal-svg.js"></script>
     <script src="game.js"></script>
 </body>

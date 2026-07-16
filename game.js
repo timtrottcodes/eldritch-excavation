@@ -17,6 +17,20 @@ const gameState = {
     relics: [], // [relicId, ...]
     prestigeUpgrades: [], // [upgradeId, ...]
     missions: {}, // { missionId: completed }
+    achievements: [], // [achievementId, ...]
+
+    // Critical Hit Stats
+    criticalHits: 0,
+    consecutiveCrits: 0,
+    currentCritStreak: 0,
+    baseCritChance: 0.05, // 5% base chance
+    baseCritMultiplier: 5, // 5x damage on crit
+
+    // Ascension
+    ascensions: 0,
+    cosmicPower: 0,
+    totalMadnessSpent: 0, // Track lifetime madness for ascension calculation
+    ascensionUpgrades: [],
 
     // Stats
     orePerClick: 1,
@@ -54,7 +68,7 @@ function formatNumber(num) {
     return (num / 1e36).toFixed(2) + 'UDc';
 }
 
-// Calculate multipliers from upgrades and relics
+// Calculate multipliers from upgrades, relics, and achievements
 function calculateMultipliers() {
     let clickMult = 1;
     let prodMult = 1;
@@ -66,6 +80,15 @@ function calculateMultipliers() {
     let globalMultPrestige = 1;
     let productionMultPrestige = 1;
     let madnessGainMult = 1;
+
+    // Achievement bonuses
+    const achBonuses = calculateAchievementBonuses(gameState);
+    clickMult *= (1 + achBonuses.clickPowerBonus);
+    prodMult *= (1 + achBonuses.productionBonus);
+    globalMult *= (1 + achBonuses.globalMultiplier);
+    madnessGainMult *= (1 + achBonuses.madnessGainBonus);
+    gameState.baseCritChance = 0.05 + achBonuses.critChanceBonus;
+    gameState.baseCritMultiplier = 5 + achBonuses.critMultiplierBonus;
 
     // Upgrades
     gameState.upgrades.forEach(upgradeId => {
@@ -102,6 +125,20 @@ function calculateMultipliers() {
             if (upgrade.effect.globalMultPrestige) globalMultPrestige *= upgrade.effect.globalMultPrestige;
             if (upgrade.effect.productionMultPrestige) productionMultPrestige *= upgrade.effect.productionMultPrestige;
             if (upgrade.effect.madnessGainMult) madnessGainMult *= upgrade.effect.madnessGainMult;
+        }
+    });
+
+    // Ascension upgrades (Cosmic Power bonuses)
+    gameState.ascensionUpgrades.forEach(upgradeId => {
+        const upgrade = ASCENSION_DATA.upgrades.find(u => u.id === upgradeId);
+        if (upgrade && upgrade.effect) {
+            if (upgrade.effect.clickPowerMult) clickMult *= upgrade.effect.clickPowerMult;
+            if (upgrade.effect.productionMult) prodMult *= upgrade.effect.productionMult;
+            if (upgrade.effect.madnessGain) madnessGainMult *= upgrade.effect.madnessGain;
+            if (upgrade.effect.globalMult) globalMult *= upgrade.effect.globalMult;
+            if (upgrade.effect.toolEfficiency) toolMult *= upgrade.effect.toolEfficiency;
+            if (upgrade.effect.critChance) gameState.baseCritChance += upgrade.effect.critChance;
+            if (upgrade.effect.critMultiplier) gameState.baseCritMultiplier += upgrade.effect.critMultiplier;
         }
     });
 
@@ -168,25 +205,52 @@ function checkOreUnlocks() {
     }
 }
 
-// Click handler
+// Click handler with critical hits
 function handleClick() {
-    addOre(gameState.orePerClick);
+    let oreGained = gameState.orePerClick;
+    let isCrit = false;
+
+    // Check for critical hit
+    if (Math.random() < gameState.baseCritChance) {
+        oreGained *= gameState.baseCritMultiplier;
+        isCrit = true;
+        gameState.criticalHits++;
+        gameState.currentCritStreak++;
+
+        // Track consecutive crits
+        if (gameState.currentCritStreak > gameState.consecutiveCrits) {
+            gameState.consecutiveCrits = gameState.currentCritStreak;
+        }
+    } else {
+        gameState.currentCritStreak = 0;
+    }
+
+    addOre(oreGained);
     gameState.totalClicks++;
 
     if (gameState.particles) {
-        showDamageNumber(gameState.orePerClick);
+        showDamageNumber(oreGained, isCrit);
         createClickEffect();
         createClickParticles(); // Add particle effects
+
+        if (isCrit) {
+            showCriticalHitEffect();
+        }
     }
 
+    checkAchievements();
     checkMissions();
     updateUI();
 }
 
 // Show floating damage number
-function showDamageNumber(amount) {
+function showDamageNumber(amount, isCrit = false) {
     const container = $('#damage-numbers');
     const number = $('<div class="damage-number">').text('+' + formatNumber(amount));
+
+    if (isCrit) {
+        number.addClass('critical-hit');
+    }
 
     const x = Math.random() * 300 - 150;
     const y = Math.random() * 50 - 25;
@@ -200,6 +264,23 @@ function showDamageNumber(amount) {
     container.append(number);
 
     setTimeout(() => number.remove(), 1000);
+}
+
+// Show critical hit effect
+function showCriticalHitEffect() {
+    // Screen flash
+    $('body').addClass('crit-flash');
+    setTimeout(() => $('body').removeClass('crit-flash'), 150);
+
+    // Explosion rings
+    const container = $('#damage-numbers');
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const ring = $('<div class="crit-ring">');
+            container.append(ring);
+            setTimeout(() => ring.remove(), 600);
+        }, i * 100);
+    }
 }
 
 // Create click visual effect
@@ -395,6 +476,7 @@ function buyPrestigeUpgrade(upgradeId) {
 
     if (gameState.madness >= upgrade.cost) {
         gameState.madness -= upgrade.cost;
+        gameState.totalMadnessSpent += upgrade.cost; // Track for ascension
         gameState.prestigeUpgrades.push(upgradeId);
         updateCalculations();
         updateUI();
@@ -452,10 +534,169 @@ function prestige() {
     });
 
     updateCalculations();
+    checkAchievements();
     checkMissions();
     updateUI();
     renderAllLists(); // Re-render everything after prestige
     showNotification(`Prestige complete! Gained ${madnessGain} Madness!`);
+}
+
+// Calculate Cosmic Power gain on ascension
+function calculateCosmicPowerGain() {
+    return ASCENSION_DATA.calculateCosmicPower(gameState.totalMadnessSpent);
+}
+
+// Ascension (2nd prestige layer)
+function ascend() {
+    const cosmicGain = calculateCosmicPowerGain();
+
+    if (cosmicGain <= 0) {
+        showNotification('You need to spend more Madness to gain Cosmic Power!');
+        return;
+    }
+
+    if (gameState.prestiges < ASCENSION_DATA.minPrestiges) {
+        showNotification(`You need at least ${ASCENSION_DATA.minPrestiges} prestiges to ascend!`);
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to ASCEND?\n\nYou will gain ${cosmicGain} Cosmic Power but lose ALL Madness and restart all prestiges.\n\nRelics and Cosmic Upgrades are kept forever.`)) {
+        return;
+    }
+
+    // Complete reset
+    gameState.ore = 0;
+    gameState.totalOre = 0;
+    gameState.totalClicks = 0;
+    gameState.currentOreIndex = 0;
+    gameState.madness = 0;
+    gameState.prestiges = 0;
+
+    // Reset tools
+    GAME_DATA.tools.forEach(tool => {
+        gameState.tools[tool.id] = 0;
+    });
+
+    gameState.upgrades = [];
+    gameState.prestigeUpgrades = [];
+    // Relics and ascensionUpgrades persist!
+
+    // Add cosmic power
+    gameState.cosmicPower += cosmicGain;
+    gameState.ascensions++;
+
+    updateCalculations();
+    checkAchievements();
+    checkMissions();
+    updateUI();
+    renderAllLists();
+    showNotification(`Ascension complete! Gained ${cosmicGain} Cosmic Power!`);
+}
+
+// Buy ascension upgrade
+function buyAscensionUpgrade(upgradeId) {
+    const upgrade = ASCENSION_DATA.upgrades.find(u => u.id === upgradeId);
+    if (!upgrade) return false;
+
+    // Check if already owned
+    if (gameState.ascensionUpgrades.includes(upgradeId)) {
+        return false;
+    }
+
+    // Check requirement
+    if (upgrade.requirement && !gameState.ascensionUpgrades.includes(upgrade.requirement)) {
+        showNotification(`Requires ${ASCENSION_DATA.upgrades.find(u => u.id === upgrade.requirement).name}`);
+        return false;
+    }
+
+    // Check cost
+    if (gameState.cosmicPower < upgrade.cost) {
+        return false;
+    }
+
+    // Purchase
+    gameState.cosmicPower -= upgrade.cost;
+    gameState.ascensionUpgrades.push(upgradeId);
+
+    updateCalculations();
+    updateUI();
+    renderAllLists();
+    showNotification(`Purchased: ${upgrade.name}!`);
+    return true;
+}
+
+// Check and unlock achievements
+function checkAchievements() {
+    if (!gameState.achievements) {
+        gameState.achievements = [];
+    }
+
+    ACHIEVEMENTS.forEach(achievement => {
+        if (gameState.achievements.includes(achievement.id)) return; // Already unlocked
+
+        let unlocked = false;
+        const req = achievement.requirement;
+
+        // Check different requirement types
+        if (req.totalClicks && gameState.totalClicks >= req.totalClicks) unlocked = true;
+        if (req.orePerClick && gameState.orePerClick >= req.orePerClick) unlocked = true;
+        if (req.orePerSecond && gameState.orePerSecond >= req.orePerSecond) unlocked = true;
+        if (req.criticalHits && gameState.criticalHits >= req.criticalHits) unlocked = true;
+        if (req.consecutiveCrits && gameState.consecutiveCrits >= req.consecutiveCrits) unlocked = true;
+        if (req.toolsPurchased) {
+            let total = 0;
+            Object.values(gameState.tools).forEach(level => total += level);
+            if (total >= req.toolsPurchased) unlocked = true;
+        }
+        if (req.maxedTools) {
+            let maxed = 0;
+            Object.values(gameState.tools).forEach(level => { if (level >= 256) maxed++; });
+            if (maxed >= req.maxedTools) unlocked = true;
+        }
+        if (req.toolsUnlocked) {
+            let unlocked_count = 0;
+            Object.keys(gameState.tools).forEach(id => { if (gameState.tools[id] > 0) unlocked_count++; });
+            if (unlocked_count >= req.toolsUnlocked) unlocked = true;
+        }
+        if (req.prestiges && gameState.prestiges >= req.prestiges) unlocked = true;
+        if (req.totalMadness && (gameState.madness + (gameState.prestiges * 10)) >= req.totalMadness) unlocked = true;
+        if (req.totalOre && gameState.totalOre >= req.totalOre) unlocked = true;
+        if (req.relicsOwned && gameState.relics.length >= req.relicsOwned) unlocked = true;
+        if (req.upgradesOwned && gameState.upgrades.length >= req.upgradesOwned) unlocked = true;
+        if (req.prestigeUpgradesOwned && gameState.prestigeUpgrades.length >= req.prestigeUpgradesOwned) unlocked = true;
+        if (req.oreIndex && gameState.currentOreIndex >= req.oreIndex) unlocked = true;
+
+        if (unlocked) {
+            gameState.achievements.push(achievement.id);
+            showAchievementUnlock(achievement);
+            calculateMultipliers(); // Recalculate bonuses
+        }
+    });
+}
+
+// Show achievement unlock notification
+function showAchievementUnlock(achievement) {
+    console.log(`🏆 Achievement Unlocked: ${achievement.name}`);
+
+    const notification = $('<div class="achievement-popup">').html(`
+        <div class="achievement-icon">${achievement.icon}</div>
+        <div class="achievement-info">
+            <div class="achievement-title">Achievement Unlocked!</div>
+            <div class="achievement-name">${achievement.name}</div>
+            <div class="achievement-desc">${achievement.description}</div>
+        </div>
+    `);
+
+    $('body').append(notification);
+
+    setTimeout(() => {
+        notification.addClass('show');
+    }, 100);
+
+    setTimeout(() => {
+        notification.removeClass('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 4000);
 }
 
 // Check and complete missions
@@ -579,6 +820,18 @@ function updateUI() {
 
     // Enable/disable prestige button (both desktop and mobile)
     $('#prestige-btn, #mobile-prestige-btn').prop('disabled', madnessGain <= 0);
+
+    // Update ascension info
+    const cosmicGain = calculateCosmicPowerGain();
+    $('#cosmic-on-ascension').text(cosmicGain);
+    $('#cosmic-power').text(formatNumber(gameState.cosmicPower));
+    $('#ascension-prestiges').text(gameState.prestiges);
+    $('#ascension-btn').prop('disabled', cosmicGain <= 0 || gameState.prestiges < ASCENSION_DATA.minPrestiges);
+
+    // Show/hide ascension tab (unlock at 10 prestiges)
+    if (gameState.prestiges >= ASCENSION_DATA.minPrestiges) {
+        $('#ascension-tab-btn').show();
+    }
 
     // Update crystal SVG based on current ore
     updateCrystalSVG(currentOre);
@@ -959,6 +1212,53 @@ function renderPrestigeUpgrades() {
     });
 }
 
+// Render ascension upgrades list
+function renderAscensionUpgrades() {
+    const container = $('#ascension-upgrades-list');
+    container.empty();
+
+    // Group by tier
+    const tiers = [1, 2, 3, 4];
+    tiers.forEach(tier => {
+        const tierUpgrades = ASCENSION_DATA.upgrades.filter(u => u.tier === tier);
+        if (tierUpgrades.length === 0) return;
+
+        const tierHeader = $('<div class="tier-header">').text(`Tier ${tier}`);
+        container.append(tierHeader);
+
+        tierUpgrades.forEach(upgrade => {
+            const owned = gameState.ascensionUpgrades.includes(upgrade.id);
+            const locked = upgrade.requirement && !gameState.ascensionUpgrades.includes(upgrade.requirement);
+
+            const card = $('<div class="item-card">');
+            if (owned) card.addClass('maxed');
+            if (locked) card.addClass('locked');
+
+            const header = $('<div class="item-header">');
+            header.append($('<span class="item-icon">').text(upgrade.icon));
+            header.append($('<span class="item-name">').text(upgrade.name));
+            if (owned) header.append($('<span class="item-level">').text('✓ Owned'));
+
+            const description = $('<div class="item-description">').text(upgrade.description);
+
+            const buyBtn = $('<button class="buy-btn">');
+            if (owned) {
+                buyBtn.text('Purchased').prop('disabled', true);
+            } else if (locked) {
+                const reqUpgrade = ASCENSION_DATA.upgrades.find(u => u.id === upgrade.requirement);
+                buyBtn.text(`Requires: ${reqUpgrade.name}`).prop('disabled', true);
+            } else {
+                buyBtn.text(`Buy - 🌌 ${upgrade.cost} Cosmic Power`);
+                buyBtn.prop('disabled', gameState.cosmicPower < upgrade.cost);
+                buyBtn.on('click', () => buyAscensionUpgrade(upgrade.id));
+            }
+
+            card.append(header, description, buyBtn);
+            container.append(card);
+        });
+    });
+}
+
 // Render missions list
 function renderMissions() {
     const container = $('#missions-list');
@@ -996,6 +1296,7 @@ function renderAllLists() {
     renderUpgrades();
     renderRelics();
     renderPrestigeUpgrades();
+    renderAscensionUpgrades();
     renderMissions();
 }
 
@@ -1193,6 +1494,9 @@ function setupEventListeners() {
 
     // Prestige button (both desktop and mobile)
     $('#prestige-btn, #mobile-prestige-btn').on('click', prestige);
+
+    // Ascension button
+    $('#ascension-btn').on('click', ascend);
 
     // Desktop footer buttons
     $('#save-btn').on('click', () => {
