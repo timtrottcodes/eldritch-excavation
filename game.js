@@ -841,7 +841,7 @@ function updateUI() {
     $('.crystal-glow').css('background', `radial-gradient(circle, ${currentOre.color}40 0%, transparent 70%)`);
 
     // Update theme colors based on current ore
-    updateThemeColor(currentOre.color);
+    updateThemeColor(currentOre.color, currentOre.textColor);
 
     // Update button states (enable/disable based on resources)
     updateButtonStates();
@@ -859,7 +859,7 @@ function updateCrystalSVG(currentOre) {
 }
 
 // Update global theme color based on ore
-function updateThemeColor(oreColor) {
+function updateThemeColor(oreColor, textColor) {
     // Convert hex to rgba for glow effect
     const r = parseInt(oreColor.slice(1, 3), 16);
     const g = parseInt(oreColor.slice(3, 5), 16);
@@ -869,6 +869,7 @@ function updateThemeColor(oreColor) {
     // Update CSS custom properties
     document.documentElement.style.setProperty('--ore-color', oreColor);
     document.documentElement.style.setProperty('--ore-glow', oreGlow);
+    document.documentElement.style.setProperty('--ore-text-color', textColor || '#FFFFFF');
 }
 
 // Update button states based on current resources
@@ -955,12 +956,15 @@ function renderTools() {
         const isMaxed = level >= MAX_TOOL_LEVEL;
         const rarity = getRarityForLevel(level);
 
+        // Hide locked tools - only show unlocked tools
+        if (!isUnlocked) {
+            return; // Skip rendering this tool
+        }
+
         const card = $('<div class="item-card tool-card">');
 
-        // Lock or max level status
-        if (!isUnlocked) {
-            card.addClass('locked');
-        } else if (isMaxed) {
+        // Max level status
+        if (isMaxed) {
             card.addClass('maxed');
         }
 
@@ -977,14 +981,7 @@ function renderTools() {
 
         // Level and rarity display
         const levelInfo = $('<span class="item-level">');
-        if (!isUnlocked) {
-            // Show unlock requirement
-            const toolIndex = GAME_DATA.tools.findIndex(t => t.id === tool.id);
-            const prevTool = GAME_DATA.tools[toolIndex - 1];
-            const prevLevel = gameState.tools[prevTool.id] || 0;
-            levelInfo.text(`🔒 Need ${prevTool.name} Lv${RARITY_TIERS.EPIC.requiredLevel} (${prevLevel}/${RARITY_TIERS.EPIC.requiredLevel})`);
-            levelInfo.css('color', '#FF4444');
-        } else if (isMaxed) {
+        if (isMaxed) {
             levelInfo.text(`Lv ${level}/${MAX_TOOL_LEVEL} MAX`);
             levelInfo.css('color', '#FFD700');
         } else {
@@ -998,7 +995,7 @@ function renderTools() {
         const description = $('<div class="item-description">').text(tool.description);
 
         // Production and cost
-        if (isUnlocked && !isMaxed) {
+        if (!isMaxed) {
             const production = GameDataHelper.getToolProduction(tool.id, level);
             const totalProduction = production * GAME_DATA.ores[gameState.currentOreIndex].baseValue *
                                    gameState.productionMultiplier * gameState.toolEfficiencyMultiplier *
@@ -1032,7 +1029,8 @@ function renderTools() {
             const progressBar = createRarityProgressBar(level);
 
             card.append(header, description, stats, progressBar, buyBtn, buy10Btn);
-        } else if (isMaxed) {
+        } else {
+            // Maxed
             card.append(header, description);
             const maxMessage = $('<div class="item-description">').text('✨ Maximum Level Reached! ✨').css({
                 'color': '#FFD700',
@@ -1040,8 +1038,6 @@ function renderTools() {
                 'font-weight': 'bold'
             });
             card.append(maxMessage);
-        } else {
-            card.append(header, description);
         }
 
         container.append(card);
@@ -1113,9 +1109,12 @@ function renderUpgrades() {
         const owned = gameState.upgrades.includes(upgrade.id);
         const locked = upgrade.requirement && !gameState.upgrades.includes(upgrade.requirement);
 
+        if (locked) {
+            return; 
+        }
+
         const card = $('<div class="item-card">');
         if (owned) card.addClass('maxed');
-        if (locked) card.addClass('locked');
 
         const header = $('<div class="item-header">');
         header.append($('<span class="item-name">').text(upgrade.name));
@@ -1126,8 +1125,6 @@ function renderUpgrades() {
         const buyBtn = $('<button class="buy-btn">');
         if (owned) {
             buyBtn.text('Purchased').prop('disabled', true);
-        } else if (locked) {
-            buyBtn.text('Locked').prop('disabled', true);
         } else {
             buyBtn.text(`Buy - 💰 ${formatNumber(upgrade.cost)}`);
             buyBtn.prop('disabled', gameState.ore < upgrade.cost);
@@ -1185,9 +1182,12 @@ function renderPrestigeUpgrades() {
         const owned = gameState.prestigeUpgrades.includes(upgrade.id);
         const locked = upgrade.requirement && !gameState.prestigeUpgrades.includes(upgrade.requirement);
 
+        if (locked) {
+            return;
+        }
+
         const card = $('<div class="item-card">');
         if (owned) card.addClass('maxed');
-        if (locked) card.addClass('locked');
 
         const header = $('<div class="item-header">');
         header.append($('<span class="item-name">').text(upgrade.name));
@@ -1198,8 +1198,6 @@ function renderPrestigeUpgrades() {
         const buyBtn = $('<button class="buy-btn">');
         if (owned) {
             buyBtn.text('Purchased').prop('disabled', true);
-        } else if (locked) {
-            buyBtn.text('Locked').prop('disabled', true);
         } else {
             buyBtn.text(`Buy - 🌑 ${formatNumber(upgrade.cost)} Madness`);
             buyBtn.prop('disabled', gameState.madness < upgrade.cost);
@@ -1230,9 +1228,12 @@ function renderAscensionUpgrades() {
             const owned = gameState.ascensionUpgrades.includes(upgrade.id);
             const locked = upgrade.requirement && !gameState.ascensionUpgrades.includes(upgrade.requirement);
 
+            if (locked) {
+                return;
+            }
+
             const card = $('<div class="item-card">');
             if (owned) card.addClass('maxed');
-            if (locked) card.addClass('locked');
 
             const header = $('<div class="item-header">');
             header.append($('<span class="item-icon">').text(upgrade.icon));
@@ -1244,9 +1245,6 @@ function renderAscensionUpgrades() {
             const buyBtn = $('<button class="buy-btn">');
             if (owned) {
                 buyBtn.text('Purchased').prop('disabled', true);
-            } else if (locked) {
-                const reqUpgrade = ASCENSION_DATA.upgrades.find(u => u.id === upgrade.requirement);
-                buyBtn.text(`Requires: ${reqUpgrade.name}`).prop('disabled', true);
             } else {
                 buyBtn.text(`Buy - 🌌 ${upgrade.cost} Cosmic Power`);
                 buyBtn.prop('disabled', gameState.cosmicPower < upgrade.cost);
