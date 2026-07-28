@@ -32,6 +32,10 @@ const gameState = {
     totalMadnessSpent: 0, // Track lifetime madness for ascension calculation
     ascensionUpgrades: [],
 
+    // Expeditions
+    activeExpedition: null, // { id, startTime, endTime }
+    expeditionCompletedIds: [], // Track completed expeditions for achievements
+
     // Stats
     orePerClick: 1,
     orePerSecond: 0,
@@ -625,6 +629,130 @@ function buyAscensionUpgrade(upgradeId) {
     return true;
 }
 
+// ========================================
+// EXPEDITION SYSTEM
+// ========================================
+
+// Start an expedition
+function startExpedition(expeditionId) {
+    if (gameState.activeExpedition) {
+        showNotification('An expedition is already in progress!');
+        return false;
+    }
+
+    const expedition = EXPEDITION_DATA.expeditions.find(e => e.id === expeditionId);
+    if (!expedition) return false;
+
+    const now = Date.now();
+    gameState.activeExpedition = {
+        id: expeditionId,
+        startTime: now,
+        endTime: now + (expedition.duration * 1000)
+    };
+
+    updateUI();
+    renderExpeditions();
+    showNotification(`${expedition.name} has begun! Your workers will return in ${EXPEDITION_DATA.formatTimeRemaining(expedition.duration)}`);
+    return true;
+}
+
+// Check if expedition is complete
+function checkExpeditionCompletion() {
+    if (!gameState.activeExpedition) return;
+
+    const now = Date.now();
+    if (now >= gameState.activeExpedition.endTime) {
+        completeExpedition();
+    }
+}
+
+// Complete expedition and grant rewards
+function completeExpedition() {
+    if (!gameState.activeExpedition) return;
+
+    const expedition = EXPEDITION_DATA.expeditions.find(e => e.id === gameState.activeExpedition.id);
+    if (!expedition) {
+        gameState.activeExpedition = null;
+        return;
+    }
+
+    const rewards = EXPEDITION_DATA.calculateRewards(expedition.id, gameState);
+
+    // Grant ore reward
+    gameState.ore += rewards.ore;
+    gameState.totalOre += rewards.ore;
+
+    // Grant madness reward (if applicable)
+    if (rewards.madness > 0) {
+        gameState.madness += rewards.madness;
+    }
+
+    // Check for relic discovery
+    let relicFound = null;
+    if (Math.random() < rewards.relicChance) {
+        relicFound = EXPEDITION_DATA.selectRandomRelic(gameState, expedition.tier);
+        if (relicFound) {
+            gameState.relics.push(relicFound.id);
+        }
+    }
+
+    // Track completion
+    if (!gameState.expeditionCompletedIds) {
+        gameState.expeditionCompletedIds = [];
+    }
+    gameState.expeditionCompletedIds.push(expedition.id);
+
+    // Clear active expedition
+    gameState.activeExpedition = null;
+
+    // Build notification message
+    let message = `Expedition complete!\n\n`;
+    message += `Ore found: ${formatNumber(rewards.ore)}\n`;
+    if (rewards.madness > 0) {
+        message += `Madness gained: ${rewards.madness}\n`;
+    }
+    if (relicFound) {
+        message += `\n🔮 RELIC DISCOVERED: ${relicFound.name}! 🔮`;
+    } else {
+        message += `\nNo relics found this time...`;
+    }
+
+    showNotification(message);
+
+    // Show special relic notification
+    if (relicFound) {
+        showRelicDiscovery(relicFound);
+    }
+
+    updateCalculations();
+    checkAchievements();
+    updateUI();
+    renderAllLists();
+}
+
+// Show relic discovery notification
+function showRelicDiscovery(relic) {
+    const notification = $('<div class="relic-discovery">').html(`
+        <div class="relic-discovery-icon">🔮</div>
+        <div class="relic-discovery-info">
+            <div class="relic-discovery-title">RELIC DISCOVERED!</div>
+            <div class="relic-discovery-name">${relic.name}</div>
+            <div class="relic-discovery-desc">${relic.description}</div>
+        </div>
+    `);
+
+    $('body').append(notification);
+
+    setTimeout(() => {
+        notification.addClass('show');
+    }, 100);
+
+    setTimeout(() => {
+        notification.removeClass('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 5000);
+}
+
 // Check and unlock achievements
 function checkAchievements() {
     if (!gameState.achievements) {
@@ -788,6 +916,9 @@ function gameLoop() {
         gameState.lastSave = now;
     }
 
+    // Check expedition completion
+    checkExpeditionCompletion();
+
     updateUI();
 }
 
@@ -831,6 +962,19 @@ function updateUI() {
     // Show/hide ascension tab (unlock at 10 prestiges)
     if (gameState.prestiges >= ASCENSION_DATA.minPrestiges) {
         $('#ascension-tab-btn').show();
+    }
+
+    // Update expedition progress if active
+    if (gameState.activeExpedition) {
+        const expedition = EXPEDITION_DATA.expeditions.find(e => e.id === gameState.activeExpedition.id);
+        if (expedition) {
+            const now = Date.now();
+            const remaining = Math.max(0, gameState.activeExpedition.endTime - now);
+            const progress = 1 - (remaining / (expedition.duration * 1000));
+
+            $('#expedition-progress-fill').css('width', (progress * 100) + '%');
+            $('#expedition-time-remaining').text(`Time Remaining: ${EXPEDITION_DATA.formatTimeRemaining(remaining / 1000)}`);
+        }
     }
 
     // Update crystal SVG based on current ore
@@ -1109,8 +1253,9 @@ function renderUpgrades() {
         const owned = gameState.upgrades.includes(upgrade.id);
         const locked = upgrade.requirement && !gameState.upgrades.includes(upgrade.requirement);
 
+        // Hide locked upgrades - only show owned or available to buy
         if (locked) {
-            return; 
+            return; // Skip rendering this upgrade
         }
 
         const card = $('<div class="item-card">');
@@ -1144,28 +1289,30 @@ function renderRelics() {
     container.empty();
     mobileContainer.empty();
 
-    GAME_DATA.relics.forEach(relic => {
-        const owned = gameState.relics.includes(relic.id);
+    // Only show discovered relics
+    const discoveredRelics = GAME_DATA.relics.filter(relic => gameState.relics.includes(relic.id));
 
+    if (discoveredRelics.length === 0) {
+        const emptyMessage = $('<div class="empty-list-message">').html(`
+            <p>🗺️ No relics discovered yet...</p>
+            <p>Send expeditions to uncover ancient artifacts!</p>
+        `);
+        container.append(emptyMessage);
+        mobileContainer.append(emptyMessage.clone());
+        return;
+    }
+
+    discoveredRelics.forEach(relic => {
         const card = $('<div class="item-card">');
-        if (owned) card.addClass('maxed');
+        card.addClass('maxed'); // All shown relics are owned
 
         const header = $('<div class="item-header">');
         header.append($('<span class="item-name">').text(`🔮 ${relic.name}`));
-        if (owned) header.append($('<span class="item-level">').text('✓ Owned'));
+        header.append($('<span class="item-level">').text('✓ Discovered'));
 
         const description = $('<div class="item-description">').text(relic.description);
 
-        const buyBtn = $('<button class="buy-btn">');
-        if (owned) {
-            buyBtn.text('Discovered').prop('disabled', true);
-        } else {
-            buyBtn.text(`Discover - 💰 ${formatNumber(relic.cost)}`);
-            buyBtn.prop('disabled', gameState.ore < relic.cost);
-            buyBtn.on('click', () => buyRelic(relic.id));
-        }
-
-        card.append(header, description, buyBtn);
+        card.append(header, description);
         container.append(card);
         mobileContainer.append(card.clone(true));
     });
@@ -1182,8 +1329,9 @@ function renderPrestigeUpgrades() {
         const owned = gameState.prestigeUpgrades.includes(upgrade.id);
         const locked = upgrade.requirement && !gameState.prestigeUpgrades.includes(upgrade.requirement);
 
+        // Hide locked prestige upgrades - only show owned or available to buy
         if (locked) {
-            return;
+            return; // Skip rendering this upgrade
         }
 
         const card = $('<div class="item-card">');
@@ -1228,8 +1376,9 @@ function renderAscensionUpgrades() {
             const owned = gameState.ascensionUpgrades.includes(upgrade.id);
             const locked = upgrade.requirement && !gameState.ascensionUpgrades.includes(upgrade.requirement);
 
+            // Hide locked ascension upgrades - only show owned or available to buy
             if (locked) {
-                return;
+                return; // Skip rendering this upgrade
             }
 
             const card = $('<div class="item-card">');
@@ -1255,6 +1404,58 @@ function renderAscensionUpgrades() {
             container.append(card);
         });
     });
+}
+
+// Render expeditions list
+function renderExpeditions() {
+    const container = $('#expedition-list');
+    container.empty();
+
+    const activeExpedition = $('#active-expedition');
+
+    if (gameState.activeExpedition) {
+        // Show active expedition
+        activeExpedition.show();
+
+        const expedition = EXPEDITION_DATA.expeditions.find(e => e.id === gameState.activeExpedition.id);
+        const now = Date.now();
+        const remaining = Math.max(0, gameState.activeExpedition.endTime - now);
+        const progress = 1 - (remaining / (expedition.duration * 1000));
+
+        $('#expedition-name').text(`${expedition.icon} ${expedition.name}`);
+        $('#expedition-progress-fill').css('width', (progress * 100) + '%');
+        $('#expedition-time-remaining').text(`Time Remaining: ${EXPEDITION_DATA.formatTimeRemaining(remaining / 1000)}`);
+    } else {
+        // Hide active expedition display
+        activeExpedition.hide();
+
+        // Show available expeditions
+        EXPEDITION_DATA.expeditions.forEach(expedition => {
+            const rewards = EXPEDITION_DATA.calculateRewards(expedition.id, gameState);
+
+            const card = $('<div class="item-card expedition-card">');
+
+            const header = $('<div class="item-header">');
+            header.append($('<span class="item-name">').text(`${expedition.icon} ${expedition.name}`));
+            header.append($('<span class="item-level">').text(EXPEDITION_DATA.formatTimeRemaining(expedition.duration)));
+
+            const description = $('<div class="item-description">').text(expedition.description);
+
+            // Rewards display
+            const rewardsDiv = $('<div class="expedition-rewards">');
+            rewardsDiv.append($('<div>').html(`💰 <strong>${formatNumber(rewards.ore)}</strong> ore`));
+            if (rewards.madness > 0) {
+                rewardsDiv.append($('<div>').html(`🌑 <strong>${rewards.madness}</strong> madness`));
+            }
+            rewardsDiv.append($('<div>').html(`🔮 <strong>${Math.floor(rewards.relicChance * 100)}%</strong> relic chance`));
+
+            const startBtn = $('<button class="buy-btn expedition-btn">').text('Launch Expedition');
+            startBtn.on('click', () => startExpedition(expedition.id));
+
+            card.append(header, description, rewardsDiv, startBtn);
+            container.append(card);
+        });
+    }
 }
 
 // Render missions list
@@ -1293,6 +1494,7 @@ function renderAllLists() {
     renderTools();
     renderUpgrades();
     renderRelics();
+    renderExpeditions();
     renderPrestigeUpgrades();
     renderAscensionUpgrades();
     renderMissions();

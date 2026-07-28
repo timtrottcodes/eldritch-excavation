@@ -18,7 +18,7 @@
     /* Dynamic ore color (updated by JS based on current ore) */
     --ore-color: #8B7355;
     --ore-glow: rgba(139, 115, 85, 0.3);
-    --ore-text-color: #FFFFFF;
+    --ore-text-color: #FFFFFF; /* Text color that contrasts with ore color */
 }
 
 * {
@@ -1529,4 +1529,165 @@ input:focus-visible {
 .item-icon {
     font-size: 1.5em;
     margin-right: 10px;
+}
+
+/* ========================================
+   EXPEDITION SYSTEM
+   ======================================== */
+
+.expedition-active {
+    background: linear-gradient(135deg, rgba(106, 13, 173, 0.1) 0%, rgba(155, 89, 182, 0.1) 100%);
+    border: 2px solid rgba(155, 89, 182, 0.5);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.expedition-active h4 {
+    color: var(--accent-gold);
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    text-align: center;
+}
+
+.expedition-progress-bar {
+    width: 100%;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+}
+
+#expedition-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-gold) 0%, #FFD700 100%);
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+#expedition-time-remaining {
+    text-align: center;
+    font-weight: bold;
+    color: var(--text-primary);
+    font-size: 1.1em;
+    margin-bottom: 5px;
+}
+
+.expedition-note {
+    text-align: center;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.expedition-card {
+    background: linear-gradient(135deg, var(--bg-panel-light) 0%, rgba(155, 89, 182, 0.05) 100%);
+}
+
+.expedition-rewards {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 6px;
+    margin: 10px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 0.9em;
+}
+
+.expedition-rewards > div {
+    color: var(--text-secondary);
+}
+
+.expedition-rewards strong {
+    color: var(--text-primary);
+}
+
+.expedition-btn {
+    background: linear-gradient(135deg, #6a0dad 0%, #9b59b6 100%);
+}
+
+.expedition-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #7d3cbe 0%, #b370cf 100%);
+}
+
+/* Relic Discovery Notification */
+.relic-discovery {
+    position: fixed;
+    bottom: 20px;
+    right: -450px;
+    width: 400px;
+    background: linear-gradient(135deg, #2a0845 0%, #4a0e78 100%);
+    border: 3px solid var(--accent-gold);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.9),
+        0 0 60px rgba(255, 215, 0, 0.6);
+    z-index: 10001;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    transition: right 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.relic-discovery.show {
+    right: 20px;
+}
+
+.relic-discovery-icon {
+    font-size: 4em;
+    flex-shrink: 0;
+    animation: relic-pulse 1s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes relic-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.relic-discovery-info {
+    flex: 1;
+}
+
+.relic-discovery-title {
+    font-size: 0.8em;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.relic-discovery-name {
+    font-size: 1.3em;
+    color: white;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.relic-discovery-desc {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.empty-list-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.empty-list-message p {
+    margin: 10px 0;
+}
+
+.empty-list-message p:first-child {
+    font-size: 1.2em;
+    color: var(--text-primary);
 }

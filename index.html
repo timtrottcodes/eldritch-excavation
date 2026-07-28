@@ -85,6 +85,7 @@
                     <button class="tab-btn active" data-tab="tools">⚒️ Tools</button>
                     <button class="tab-btn" data-tab="upgrades">⬆️ Upgrades</button>
                     <button class="tab-btn" data-tab="relics">🔮 Relics</button>
+                    <button class="tab-btn" data-tab="expeditions">🗺️ Expeditions</button>
                     <button class="tab-btn" data-tab="missions">📜 Missions</button>
                     <button class="tab-btn" data-tab="prestige">🌟 Prestige</button>
                     <button class="tab-btn" data-tab="ascension" id="ascension-tab-btn" style="display:none;">🌌 Ascension</button>
@@ -106,8 +107,29 @@
                     <!-- Relics Tab -->
                     <div id="relics-tab" class="tab-content">
                         <h3>Forbidden Artifacts</h3>
-                        <p class="tab-description">Discover ancient relics that grant permanent power...</p>
+                        <p class="tab-description">Discover ancient relics through expeditions...</p>
                         <div id="relics-list" class="item-list"></div>
+                    </div>
+
+                    <!-- Expeditions Tab -->
+                    <div id="expeditions-tab" class="tab-content">
+                        <h3>Expeditions</h3>
+                        <p class="tab-description">Send your workers on timed expeditions to discover relics and gather resources...</p>
+
+                        <!-- Active Expedition Display -->
+                        <div id="active-expedition" style="display:none;">
+                            <div class="expedition-active">
+                                <h4 id="expedition-name">Expedition in Progress</h4>
+                                <div class="expedition-progress-bar">
+                                    <div id="expedition-progress-fill"></div>
+                                </div>
+                                <p id="expedition-time-remaining">Time Remaining: --</p>
+                                <p class="expedition-note">Your workers will return automatically with their findings.</p>
+                            </div>
+                        </div>
+
+                        <!-- Available Expeditions -->
+                        <div id="expedition-list" class="item-list"></div>
                     </div>
 
                     <!-- Missions Tab -->
@@ -234,6 +256,7 @@
     <script src="game-data.js"></script>
     <script src="achievements-data.js"></script>
     <script src="ascension-data.js"></script>
+    <script src="expedition-data.js"></script>
     <script src="crystal-svg.js"></script>
     <script src="game.js"></script>
 </body>
