@@ -985,10 +985,14 @@ function updateUI() {
     $('.crystal-glow').css('background', `radial-gradient(circle, ${currentOre.color}40 0%, transparent 70%)`);
 
     // Update theme colors based on current ore
-    updateThemeColor(currentOre.color, currentOre.textColor);
+    // Pass glowStrength if present on ore; fallback logic inside updateThemeColor
+    updateThemeColor(currentOre.color, currentOre.textColor, currentOre.glowStrength);
 
     // Update button states (enable/disable based on resources)
     updateButtonStates();
+
+    // Ensure panel mouse-follow glow handlers are attached (idempotent)
+    setupPanelGlows();
 }
 
 // Update crystal SVG display
@@ -1003,24 +1007,81 @@ function updateCrystalSVG(currentOre) {
 }
 
 // Update global theme color based on ore
-function updateThemeColor(oreColor, textColor) {
-    // Convert hex to rgba for glow effect
+function updateThemeColor(oreColor, textColor, glowStrength) {
+    // Convert hex to rgb components
     const r = parseInt(oreColor.slice(1, 3), 16);
     const g = parseInt(oreColor.slice(3, 5), 16);
     const b = parseInt(oreColor.slice(5, 7), 16);
-    const oreGlow = `rgba(${r}, ${g}, ${b}, 0.32)`;
 
-    // Panel glow values: subtle by default, stronger on hover
-    const panelGlow = `rgba(${r}, ${g}, ${b}, 0.28)`;
-    const panelGlowStrong = `rgba(${r}, ${g}, ${b}, 0.72)`;
+    // Default glowStrength when not supplied: scale with ore index (if available), otherwise 1
+    if (typeof glowStrength !== 'number') {
+        // Fall back to a gentle default
+        glowStrength = 1;
+        try {
+            const idx = gameState.currentOreIndex || 0;
+            const max = GAME_DATA.ores.length - 1 || 1;
+            glowStrength = 0.9 + (idx / max) * 1.6; // ranges from ~0.9 to ~2.5 for late-game ores
+        } catch (e) {
+            glowStrength = 1;
+        }
+    }
+
+    // Base alphas
+    const oreGlowAlpha = 0.32 * glowStrength;
+    const panelGlowAlpha = 0.28 * glowStrength;
+    const panelGlowStrongAlpha = 0.72 * Math.min(1.6, glowStrength);
 
     // Update CSS custom properties so all panels match the ore accent colour
     document.documentElement.style.setProperty('--ore-color', oreColor);
-    document.documentElement.style.setProperty('--ore-glow', oreGlow);
+    document.documentElement.style.setProperty('--ore-glow', `rgba(${r}, ${g}, ${b}, ${oreGlowAlpha})`);
     document.documentElement.style.setProperty('--ore-text-color', textColor || '#FFFFFF');
-    document.documentElement.style.setProperty('--panel-glow', panelGlow);
-    document.documentElement.style.setProperty('--panel-glow-strong', panelGlowStrong);
+
+    // Expose RGB and alpha separately so JS can tune opacity per-panel for mouse-follow
+    document.documentElement.style.setProperty('--panel-glow-rgb', `${r}, ${g}, ${b}`);
+    document.documentElement.style.setProperty('--panel-glow-alpha', String(panelGlowAlpha));
+    document.documentElement.style.setProperty('--panel-glow-strong-alpha', String(panelGlowStrongAlpha));
 }
+
+// Attach mousemove handlers to panels to implement mouse-follow glow and per-panel intensity
+function setupPanelGlows() {
+    if (!window.__panelGlowsInitialized) {
+        const panels = document.querySelectorAll('.panel');
+        panels.forEach(el => {
+            // initialize defaults
+            el.style.setProperty('--panel-glow-x', '50%');
+            el.style.setProperty('--panel-glow-y', '50%');
+            el.style.setProperty('--panel-glow-opacity', '0.65'); // base multiplier
+
+            el.addEventListener('mousemove', (e) => {
+                const rect = el.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                el.style.setProperty('--panel-glow-x', x + '%');
+                el.style.setProperty('--panel-glow-y', y + '%');
+
+                // distance from center (0..1)
+                const dx = (x - 50) / 50;
+                const dy = (y - 50) / 50;
+                const dist = Math.min(1, Math.sqrt(dx*dx + dy*dy));
+
+                // intensity: closer to center -> stronger; clamp 0.4..1.2 and factor by global strength stored in panel-glow-alpha
+                const intensity = (1.1 - dist * 0.9); // ~1.1 -> 0.2
+                // set a per-panel opacity multiplier
+                el.style.setProperty('--panel-glow-opacity', String(Math.max(0.45, Math.min(1.2, intensity))));
+            });
+
+            el.addEventListener('mouseleave', () => {
+                // reset to center with a smooth transition
+                el.style.setProperty('--panel-glow-x', '50%');
+                el.style.setProperty('--panel-glow-y', '50%');
+                el.style.setProperty('--panel-glow-opacity', '0.65');
+            });
+        });
+
+        window.__panelGlowsInitialized = true;
+    }
+}
+
 
 // Update button states based on current resources
 function updateButtonStates() {

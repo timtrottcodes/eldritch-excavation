@@ -63,14 +63,14 @@ const GAME_DATA = {
         { id: 'carborundum', name: 'Carborundum', description: 'Harder than nature intended...', baseValue: 33000000000, unlockAt: 240000000000000, color: '#5A5A8C', textColor: '#FFFFFF' },
 
         // Eldritch Materials (Tier 29-35)
-        { id: 'voidstone', name: 'Voidstone', description: 'A mineral that should not exist...', baseValue: 80000000000, unlockAt: 700000000000000, color: '#1a0033', textColor: '#FFFFFF' },
-        { id: 'starmetal', name: 'Star-Metal', description: 'Forged in the heart of dying suns...', baseValue: 190000000000, unlockAt: 2000000000000000, color: '#FFE4B5', textColor: '#1A1A1A' },
-        { id: 'darkmatter', name: 'Dark Matter Crystal', description: 'The universe\'s hidden mass made tangible...', baseValue: 450000000000, unlockAt: 5500000000000000, color: '#0D0D1F', textColor: '#FFFFFF' },
-        { id: 'timecrystal', name: 'Time Crystal', description: 'A pattern that repeats in time, not space...', baseValue: 1100000000000, unlockAt: 16000000000000000, color: '#00CED1', textColor: '#1A1A1A' },
-        { id: 'phase_matter', name: 'Phase Matter', description: 'Exists in multiple dimensions at once...', baseValue: 2600000000000, unlockAt: 45000000000000000, color: '#FF1493', textColor: '#FFFFFF' },
-        { id: 'reality_shard', name: 'Reality Shard', description: 'Fragments of broken universes...', baseValue: 6200000000000, unlockAt: 130000000000000000, color: '#FF6347', textColor: '#FFFFFF' },
-        { id: 'elder_essence', name: 'Elder Essence', description: 'The crystallized dreams of sleeping gods...', baseValue: 15000000000000, unlockAt: 370000000000000000, color: '#8B008B', textColor: '#FFFFFF' },
-        { id: 'azathoth_core', name: 'Azathoth\'s Core', description: 'The nuclear chaos at the center of infinity...', baseValue: 36000000000000, unlockAt: 1000000000000000000, color: '#4B0082', textColor: '#FFFFFF' },
+        { id: 'voidstone', name: 'Voidstone', description: 'A mineral that should not exist...', baseValue: 80000000000, unlockAt: 700000000000000, color: '#1a0033', textColor: '#FFFFFF', glowStrength: 1.6 },
+        { id: 'starmetal', name: 'Star-Metal', description: 'Forged in the heart of dying suns...', baseValue: 190000000000, unlockAt: 2000000000000000, color: '#FFE4B5', textColor: '#1A1A1A', glowStrength: 1.15 },
+        { id: 'darkmatter', name: 'Dark Matter Crystal', description: 'The universe\'s hidden mass made tangible...', baseValue: 450000000000, unlockAt: 5500000000000000, color: '#0D0D1F', textColor: '#FFFFFF', glowStrength: 1.9 },
+        { id: 'timecrystal', name: 'Time Crystal', description: 'A pattern that repeats in time, not space...', baseValue: 1100000000000, unlockAt: 16000000000000000, color: '#00CED1', textColor: '#1A1A1A', glowStrength: 1.25 },
+        { id: 'phase_matter', name: 'Phase Matter', description: 'Exists in multiple dimensions at once...', baseValue: 2600000000000, unlockAt: 45000000000000000, color: '#FF1493', textColor: '#FFFFFF', glowStrength: 1.5 },
+        { id: 'reality_shard', name: 'Reality Shard', description: 'Fragments of broken universes...', baseValue: 6200000000000, unlockAt: 130000000000000000, color: '#FF6347', textColor: '#FFFFFF', glowStrength: 1.4 },
+        { id: 'elder_essence', name: 'Elder Essence', description: 'The crystallized dreams of sleeping gods...', baseValue: 15000000000000, unlockAt: 370000000000000000, color: '#8B008B', textColor: '#FFFFFF', glowStrength: 2.1 },
+        { id: 'azathoth_core', name: 'Azathoth\'s Core', description: 'The nuclear chaos at the center of infinity...', baseValue: 36000000000000, unlockAt: 1000000000000000000, color: '#4B0082', textColor: '#FFFFFF', glowStrength: 2.5 },
     ],
 
     // Tools that generate ore automatically (Lovecraft-themed, 25 tiers)

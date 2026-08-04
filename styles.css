@@ -107,39 +107,68 @@ body {
 .panel::after {
     content: '';
     position: absolute;
-    inset: -6px; /* allow larger halo */
+    inset: -8px; /* larger halo room */
     z-index: -1;
     border-radius: inherit;
-    /* Single-color radial neon halo with heavy blur for soft neon look */
-    background: radial-gradient(closest-side at 50% 50%, var(--panel-glow) 0%, rgba(0,0,0,0) 45%);
-    filter: blur(20px);
-    opacity: 0.35; /* subtle by default so all panels glow gently */
+    /* Mouse-follow radial neon halo. Uses per-element vars (--panel-glow-x/y, --panel-glow-opacity)
+       --panel-glow-rgb: "r, g, b"
+       --panel-glow-alpha: base alpha (set from JS and ore strength)
+       --panel-glow-opacity: dynamic per-panel multiplier (0-1) adjusted by mouse distance */
+    background: radial-gradient(closest-side at var(--panel-glow-x,50%) var(--panel-glow-y,50%), rgba(var(--panel-glow-rgb), calc(var(--panel-glow-alpha) * var(--panel-glow-opacity,1))) 0%, rgba(0,0,0,0) 45%);
+    filter: blur(22px);
+    opacity: 1; /* keep at 1 — actual visibility controlled by color alpha */
     pointer-events: none;
-    transition: opacity 0.28s ease, transform 0.28s ease;
+    transition: filter 0.18s ease, transform 0.18s ease;
     transform: scale(1);
+    animation: panel-pulse 3.2s ease-in-out infinite;
 }
 
 /* stronger visible glow on hover/focus */
 .panel:hover::after,
 .panel:focus-within::after,
 .panel.interactive:focus-within::after {
-    opacity: 0.95;
-    filter: blur(28px);
-    transform: scale(1.01);
+    filter: blur(34px);
+    transform: scale(1.015);
 }
 
-/* apply additional rim glow using box-shadow for a neon outline */
+/* subtle rim outline using inner border tinted by the ore colour */
+.panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    border: 1px solid rgba(255,255,255,0.03);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25), inset 0 0 6px rgba(var(--panel-glow-rgb), 0.06);
+    pointer-events: none;
+}
+
+/* rim highlight on hover */
+.panel:hover::before,
+.panel:focus-within::before {
+    box-shadow: inset 0 0 0 1px rgba(var(--panel-glow-rgb), 0.12), inset 0 0 12px rgba(var(--panel-glow-rgb), 0.06);
+}
+
+/* apply additional outer neon rim using box-shadow for interactive panels */
 .panel {
-    box-shadow: 0 6px 30px rgba(0,0,0,0.65), 0 0 18px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.7);
 }
 
 .panel-hover-strong:hover {
-    box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 30px var(--panel-glow-strong), 0 0 60px var(--panel-glow-strong);
+    box-shadow: 0 12px 48px rgba(0,0,0,0.72), 0 0 28px rgba(var(--panel-glow-rgb), 0.25), 0 0 60px rgba(var(--panel-glow-rgb), 0.18);
+}
+
+/* gentle pulsing animation for the halo */
+@keyframes panel-pulse {
+    0% { transform: scale(1); filter: blur(20px); }
+    50% { transform: scale(1.01); filter: blur(30px); }
+    100% { transform: scale(1); filter: blur(20px); }
 }
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
-    .panel::after { animation: none; transform: none; filter: blur(18px); }
+    .panel::after { animation: none; transform: none; filter: blur(22px); }
+    .panel { transition: none; }
 }
 
 /* A thinner inner border to keep structure when glow is strong */
