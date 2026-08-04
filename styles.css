@@ -29,11 +29,19 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--ore-color) 5%, var(--bg-dark) 100%);
+    /* Subtle, elegant background to let panels and glow stand out */
+    background-color: var(--bg-dark);
+    background-image:
+        radial-gradient(circle at 10% 10%, rgba(104,66,255,0.02), transparent 12%),
+        radial-gradient(circle at 90% 90%, rgba(0,212,170,0.015), transparent 18%),
+        linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));
     color: var(--text-primary);
     overflow-x: hidden;
     min-height: 100vh;
-    transition: background 2s ease-in-out;
+    transition: background 1.2s ease-in-out;
+    /* improve text legibility on top of subtle textures */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 #game-container {
@@ -78,17 +86,68 @@ body {
 }
 
 .panel {
-    background: var(--bg-panel);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    transition: border-color 2s ease-in-out;
+    /* Glassmorphism base */
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative; /* for glow pseudo elements */
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    overflow: visible;
+    transition: transform 0.18s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+/* Dynamic border glow using blurred, animated pseudo-element */
+.panel::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    z-index: -1;
+    border-radius: inherit;
+    background: conic-gradient(from 0deg, rgba(104,66,255,0.45), rgba(0,212,170,0.35), rgba(255,215,0,0.25), rgba(104,66,255,0.45));
+    filter: blur(14px);
+    opacity: 0; /* idle state - subtle */
+    pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    transform: scale(1);
+    animation: glow-rotate 6s linear infinite;
+}
+
+/* A thinner inner border to keep structure when glow is strong */
+.panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    border: 1px solid rgba(255,255,255,0.03);
+    pointer-events: none;
 }
 
 .panel:hover {
-    border-color: var(--ore-color);
+    transform: translateY(-4px);
 }
+
+/* When a panel is interactive or highlighted, show the glow */
+.panel.interactive:focus-within::after,
+.panel:hover::after,
+.panel:focus-within::after {
+    opacity: 0.95;
+}
+
+@keyframes glow-rotate {
+    from { transform: rotate(0deg) scale(1); }
+    to { transform: rotate(360deg) scale(1); }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .panel::after { animation: none; transform: none; }
+    .panel { transition: none; }
+}
+
 
 /* Left Panel Stats */
 #left-panel {
