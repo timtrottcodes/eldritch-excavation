@@ -15,6 +15,10 @@
     --glow-purple: rgba(104, 66, 255, 0.3);
     --glow-teal: rgba(0, 212, 170, 0.3);
 
+    /* Panel glow defaults (single-color neon rather than rainbow) */
+    --panel-glow: rgba(104, 66, 255, 0.28); /* default purple neon */
+    --panel-glow-strong: rgba(104, 66, 255, 0.65);
+
     /* Dynamic ore color (updated by JS based on current ore) */
     --ore-color: #8B7355;
     --ore-glow: rgba(139, 115, 85, 0.3);
@@ -103,16 +107,39 @@ body {
 .panel::after {
     content: '';
     position: absolute;
-    inset: -3px;
+    inset: -6px; /* allow larger halo */
     z-index: -1;
     border-radius: inherit;
-    background: conic-gradient(from 0deg, rgba(104,66,255,0.45), rgba(0,212,170,0.35), rgba(255,215,0,0.25), rgba(104,66,255,0.45));
-    filter: blur(14px);
-    opacity: 0; /* idle state - subtle */
+    /* Single-color radial neon halo with heavy blur for soft neon look */
+    background: radial-gradient(closest-side at 50% 50%, var(--panel-glow) 0%, rgba(0,0,0,0) 45%);
+    filter: blur(20px);
+    opacity: 0.35; /* subtle by default so all panels glow gently */
     pointer-events: none;
-    transition: opacity 0.35s ease, transform 0.35s ease;
+    transition: opacity 0.28s ease, transform 0.28s ease;
     transform: scale(1);
-    animation: glow-rotate 6s linear infinite;
+}
+
+/* stronger visible glow on hover/focus */
+.panel:hover::after,
+.panel:focus-within::after,
+.panel.interactive:focus-within::after {
+    opacity: 0.95;
+    filter: blur(28px);
+    transform: scale(1.01);
+}
+
+/* apply additional rim glow using box-shadow for a neon outline */
+.panel {
+    box-shadow: 0 6px 30px rgba(0,0,0,0.65), 0 0 18px rgba(0,0,0,0.5);
+}
+
+.panel-hover-strong:hover {
+    box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 30px var(--panel-glow-strong), 0 0 60px var(--panel-glow-strong);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .panel::after { animation: none; transform: none; filter: blur(18px); }
 }
 
 /* A thinner inner border to keep structure when glow is strong */
