@@ -1013,14 +1013,24 @@ function updateThemeColor(oreColor, textColor, glowStrength) {
     const g = parseInt(oreColor.slice(3, 5), 16);
     const b = parseInt(oreColor.slice(5, 7), 16);
 
-    // Default glowStrength when not supplied: scale with ore index (if available), otherwise 1
+    // Default glowStrength when not supplied: make Common Metals subtly non-glowing, then progressively increase from Silver onwards
     if (typeof glowStrength !== 'number') {
-        // Fall back to a gentle default
-        glowStrength = 1;
         try {
-            const idx = gameState.currentOreIndex || 0;
-            const max = GAME_DATA.ores.length - 1 || 1;
-            glowStrength = 0.9 + (idx / max) * 1.6; // ranges from ~0.9 to ~2.5 for late-game ores
+            const idx = (typeof gameState !== 'undefined' && gameState.currentOreIndex) ? gameState.currentOreIndex : 0;
+            const maxIdx = GAME_DATA.ores.length - 1 || 1;
+            const silverStart = 7; // index where 'Silver' sits (0-based)
+
+            if (idx < silverStart) {
+                // Common Metals: keep glow low/subtle
+                glowStrength = 0.55; // nearly no neon
+            } else {
+                // Progressive scale from silverStart..maxIdx
+                const t = (idx - silverStart) / Math.max(1, (maxIdx - silverStart)); // 0..1
+                // Map to a gentle exponential curve for nicer progression
+                const min = 1.0;
+                const max = 2.6; // strongest glow for end-game
+                glowStrength = min + (max - min) * Math.pow(t, 1.05);
+            }
         } catch (e) {
             glowStrength = 1;
         }
