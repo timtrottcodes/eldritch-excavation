@@ -1008,12 +1008,18 @@ function updateThemeColor(oreColor, textColor) {
     const r = parseInt(oreColor.slice(1, 3), 16);
     const g = parseInt(oreColor.slice(3, 5), 16);
     const b = parseInt(oreColor.slice(5, 7), 16);
-    const oreGlow = `rgba(${r}, ${g}, ${b}, 0.3)`;
+    const oreGlow = `rgba(${r}, ${g}, ${b}, 0.32)`;
 
-    // Update CSS custom properties
+    // Panel glow values: subtle by default, stronger on hover
+    const panelGlow = `rgba(${r}, ${g}, ${b}, 0.28)`;
+    const panelGlowStrong = `rgba(${r}, ${g}, ${b}, 0.72)`;
+
+    // Update CSS custom properties so all panels match the ore accent colour
     document.documentElement.style.setProperty('--ore-color', oreColor);
     document.documentElement.style.setProperty('--ore-glow', oreGlow);
     document.documentElement.style.setProperty('--ore-text-color', textColor || '#FFFFFF');
+    document.documentElement.style.setProperty('--panel-glow', panelGlow);
+    document.documentElement.style.setProperty('--panel-glow-strong', panelGlowStrong);
 }
 
 // Update button states based on current resources
