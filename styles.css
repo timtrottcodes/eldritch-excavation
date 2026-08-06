@@ -504,6 +504,7 @@ body {
     border-radius: 4px;
     padding: 8px;
     margin-bottom: 6px;
+    margin-top:1px;
     transition: all 0.3s ease;
 }
 

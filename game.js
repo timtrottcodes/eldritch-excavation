@@ -46,6 +46,16 @@ const gameState = {
     madnessMultiplier: 1,
     autoClicksPerSecond: 0,
 
+    // Click statistics (for CPS tracking and peak)
+    clickTimestamps: [], // timestamps (ms) of recent manual clicks
+    clicksPerSecond: 0,
+    peakClicksPerSecond: 0,
+
+    // Visibility/focus state
+    isPageVisible: true,
+    isWindowFocused: true,
+    isGameActive: true,
+
     // Settings
     autoSave: true,
     particles: true,
@@ -178,8 +188,15 @@ function calculateOrePerSecond() {
     total *= gameState.toolEfficiencyMultiplier;
     total *= gameState.globalMultiplier;
 
-    // Add auto-clicks
-    total += gameState.autoClicksPerSecond * gameState.orePerClick;
+    // Add auto-clicks at a fraction of manual click power so idle progress scales nicely
+    const AUTO_CLICK_IDLE_FRACTION = 0.05; // reduced so manual clicking stays most efficient
+    total += gameState.autoClicksPerSecond * gameState.orePerClick * AUTO_CLICK_IDLE_FRACTION;
+
+    // Cap idle production so it never exceeds a high fraction of the player's peak manual clicking capability.
+    // This ensures clicking remains the most efficient way to gain ore.
+    const playerPeakCPS = Math.max(6, gameState.peakClicksPerSecond || 0); // fallback to 6 CPS for new players
+    const maxIdleEquivalent = gameState.orePerClick * playerPeakCPS * 0.9; // idle capped to 90% of peak manual output
+    if (total > maxIdleEquivalent) total = maxIdleEquivalent;
 
     gameState.orePerSecond = total;
 }
@@ -189,6 +206,11 @@ function updateCalculations() {
     calculateMultipliers();
     calculateOrePerClick();
     calculateOrePerSecond();
+}
+
+// Determine whether the game should be progressing based on browser visibility and focus.
+function isGameActive() {
+    return !document.hidden && document.hasFocus();
 }
 
 // Add ore
@@ -231,6 +253,10 @@ function handleClick() {
 
     addOre(oreGained);
     gameState.totalClicks++;
+
+    // Record this click timestamp (ms) for clicks-per-second tracking
+    const __clickNow = Date.now();
+    gameState.clickTimestamps.push(__clickNow);
 
     if (gameState.particles) {
         showDamageNumber(oreGained, isCrit);
@@ -905,8 +931,8 @@ function gameLoop() {
     const deltaTime = (now - gameState.lastTick) / 1000; // Convert to seconds
     gameState.lastTick = now;
 
-    // Add passive ore production
-    if (gameState.orePerSecond > 0) {
+    // Add passive ore production only when the game is active and visible.
+    if (isGameActive() && gameState.orePerSecond > 0) {
         addOre(gameState.orePerSecond * deltaTime);
     }
 
@@ -916,10 +942,52 @@ function gameLoop() {
         gameState.lastSave = now;
     }
 
-    // Check expedition completion
-    checkExpeditionCompletion();
+    // Only progress idle systems while the game is active and visible.
+    if (isGameActive()) {
+        // Check expedition completion
+        checkExpeditionCompletion();
+    }
 
+    updateClickStats();
     updateUI();
+}
+
+// Update click statistics (compute CPS from recent timestamps and track peak)
+function updateClickStats() {
+    const now = Date.now();
+    const cutoff = now - 1000; // 1 second window
+    // keep only timestamps within the last second
+    gameState.clickTimestamps = gameState.clickTimestamps.filter(ts => ts >= cutoff);
+    gameState.clicksPerSecond = gameState.clickTimestamps.length;
+    // Update peak and trigger visual effect when surpassed
+    if (gameState.clicksPerSecond > gameState.peakClicksPerSecond) {
+        gameState.peakClicksPerSecond = gameState.clicksPerSecond;
+        createPeakSurpassEffect();
+    }
+}
+
+// Visual/particle effect when player surpasses previous CPS peak
+function createPeakSurpassEffect() {
+    try {
+        // Small burst text near the damage numbers container
+        const container = $('#damage-numbers');
+        const peakElem = $('<div class="peak-burst">').text('PEAK! ✨').css({
+            position: 'absolute',
+            left: '50%',
+            top: '20%',
+            transform: 'translate(-50%, -50%)',
+            color: '#FFD700',
+            'font-weight': 'bold',
+            'text-shadow': '0 0 12px rgba(255,215,0,0.9)',
+            'pointer-events': 'none',
+            'z-index': 9999
+        });
+        container.append(peakElem);
+        setTimeout(() => peakElem.fadeOut(300, () => peakElem.remove()), 800);
+    } catch (e) {
+        // ignore if DOM not present
+        console.warn('Peak effect failed', e);
+    }
 }
 
 // Update UI
@@ -936,6 +1004,23 @@ function updateUI() {
     $('#prestige-count').text(gameState.prestiges);
     $('#total-clicks').text(formatNumber(gameState.totalClicks));
     $('#total-ore').text(formatNumber(gameState.totalOre));
+
+    // Ensure clicks-per-second display exists (insert next to ore-per-second if missing)
+    if ($('#clicks-per-second').length === 0) {
+        try {
+            $('#ore-per-second').after($('<div class="stat-row clicks-row">').html(`Clicks/s: <span id="clicks-per-second">0</span> (<span id="peak-clicks-per-second">0</span> peak)`));
+        } catch (e) {}
+    }
+    $('#clicks-per-second').text(formatNumber(gameState.clicksPerSecond));
+    $('#peak-clicks-per-second').text(formatNumber(gameState.peakClicksPerSecond));
+
+    // Mobile stats: show CPS under mobile ore/sec if mobile UI exists
+    if ($('#mobile-ore-per-second').length && $('#mobile-clicks-per-second').length === 0) {
+        $('#mobile-ore-per-second').after($('<div id="mobile-clicks-per-second-row">').html(`Clicks/s: <span id="mobile-clicks-per-second">0</span>`));
+    }
+    if ($('#mobile-clicks-per-second').length) {
+        $('#mobile-clicks-per-second').text(formatNumber(gameState.clicksPerSecond));
+    }
 
     // Update mobile stats bar
     $('#mobile-ore-count').text(formatNumber(gameState.ore));
@@ -1822,6 +1907,20 @@ function setupEventListeners() {
             $(this).addClass('hidden');
         }
     });
+
+    // Pause idle progression when the tab is not active.
+    const updateGameActiveState = () => {
+        const visible = !document.hidden;
+        const focused = document.hasFocus();
+        gameState.isPageVisible = visible;
+        gameState.isWindowFocused = focused;
+        gameState.isGameActive = visible && focused;
+    };
+
+    document.addEventListener('visibilitychange', updateGameActiveState);
+    window.addEventListener('focus', updateGameActiveState);
+    window.addEventListener('blur', updateGameActiveState);
+    updateGameActiveState();
 
     // Keyboard shortcuts
     $(document).on('keydown', function(e) {
