@@ -1,5 +1,8 @@
 // Eldritch Excavation - Main Game Logic
 
+// Global flag to prevent saves during reset
+let isResetting = false;
+
 // Game State
 const gameState = {
     ore: 0,
@@ -14,6 +17,24 @@ const gameState = {
     relics: [], // [relicId, ...]
     prestigeUpgrades: [], // [upgradeId, ...]
     missions: {}, // { missionId: completed }
+    achievements: [], // [achievementId, ...]
+
+    // Critical Hit Stats
+    criticalHits: 0,
+    consecutiveCrits: 0,
+    currentCritStreak: 0,
+    baseCritChance: 0.05, // 5% base chance
+    baseCritMultiplier: 5, // 5x damage on crit
+
+    // Ascension
+    ascensions: 0,
+    cosmicPower: 0,
+    totalMadnessSpent: 0, // Track lifetime madness for ascension calculation
+    ascensionUpgrades: [],
+
+    // Expeditions
+    activeExpedition: null, // { id, startTime, endTime }
+    expeditionCompletedIds: [], // Track completed expeditions for achievements
 
     // Stats
     orePerClick: 1,
@@ -24,6 +45,16 @@ const gameState = {
     globalMultiplier: 1,
     madnessMultiplier: 1,
     autoClicksPerSecond: 0,
+
+    // Click statistics (for CPS tracking and peak)
+    clickTimestamps: [], // timestamps (ms) of recent manual clicks
+    clicksPerSecond: 0,
+    peakClicksPerSecond: 0,
+
+    // Visibility/focus state
+    isPageVisible: true,
+    isWindowFocused: true,
+    isGameActive: true,
 
     // Settings
     autoSave: true,
@@ -51,7 +82,7 @@ function formatNumber(num) {
     return (num / 1e36).toFixed(2) + 'UDc';
 }
 
-// Calculate multipliers from upgrades and relics
+// Calculate multipliers from upgrades, relics, and achievements
 function calculateMultipliers() {
     let clickMult = 1;
     let prodMult = 1;
@@ -63,6 +94,15 @@ function calculateMultipliers() {
     let globalMultPrestige = 1;
     let productionMultPrestige = 1;
     let madnessGainMult = 1;
+
+    // Achievement bonuses
+    const achBonuses = calculateAchievementBonuses(gameState);
+    clickMult *= (1 + achBonuses.clickPowerBonus);
+    prodMult *= (1 + achBonuses.productionBonus);
+    globalMult *= (1 + achBonuses.globalMultiplier);
+    madnessGainMult *= (1 + achBonuses.madnessGainBonus);
+    gameState.baseCritChance = 0.05 + achBonuses.critChanceBonus;
+    gameState.baseCritMultiplier = 5 + achBonuses.critMultiplierBonus;
 
     // Upgrades
     gameState.upgrades.forEach(upgradeId => {
@@ -102,6 +142,20 @@ function calculateMultipliers() {
         }
     });
 
+    // Ascension upgrades (Cosmic Power bonuses)
+    gameState.ascensionUpgrades.forEach(upgradeId => {
+        const upgrade = ASCENSION_DATA.upgrades.find(u => u.id === upgradeId);
+        if (upgrade && upgrade.effect) {
+            if (upgrade.effect.clickPowerMult) clickMult *= upgrade.effect.clickPowerMult;
+            if (upgrade.effect.productionMult) prodMult *= upgrade.effect.productionMult;
+            if (upgrade.effect.madnessGain) madnessGainMult *= upgrade.effect.madnessGain;
+            if (upgrade.effect.globalMult) globalMult *= upgrade.effect.globalMult;
+            if (upgrade.effect.toolEfficiency) toolMult *= upgrade.effect.toolEfficiency;
+            if (upgrade.effect.critChance) gameState.baseCritChance += upgrade.effect.critChance;
+            if (upgrade.effect.critMultiplier) gameState.baseCritMultiplier += upgrade.effect.critMultiplier;
+        }
+    });
+
     gameState.clickMultiplier = clickMult * clickMultPrestige;
     gameState.productionMultiplier = prodMult * productionMultPrestige;
     gameState.toolEfficiencyMultiplier = toolMult;
@@ -134,8 +188,15 @@ function calculateOrePerSecond() {
     total *= gameState.toolEfficiencyMultiplier;
     total *= gameState.globalMultiplier;
 
-    // Add auto-clicks
-    total += gameState.autoClicksPerSecond * gameState.orePerClick;
+    // Add auto-clicks at a fraction of manual click power so idle progress scales nicely
+    const AUTO_CLICK_IDLE_FRACTION = 0.05; // reduced so manual clicking stays most efficient
+    total += gameState.autoClicksPerSecond * gameState.orePerClick * AUTO_CLICK_IDLE_FRACTION;
+
+    // Cap idle production so it never exceeds a high fraction of the player's peak manual clicking capability.
+    // This ensures clicking remains the most efficient way to gain ore.
+    const playerPeakCPS = Math.max(6, gameState.peakClicksPerSecond || 0); // fallback to 6 CPS for new players
+    const maxIdleEquivalent = gameState.orePerClick * playerPeakCPS * 0.9; // idle capped to 90% of peak manual output
+    if (total > maxIdleEquivalent) total = maxIdleEquivalent;
 
     gameState.orePerSecond = total;
 }
@@ -145,6 +206,11 @@ function updateCalculations() {
     calculateMultipliers();
     calculateOrePerClick();
     calculateOrePerSecond();
+}
+
+// Determine whether the game should be progressing based on browser visibility and focus.
+function isGameActive() {
+    return !document.hidden && document.hasFocus();
 }
 
 // Add ore
@@ -165,24 +231,56 @@ function checkOreUnlocks() {
     }
 }
 
-// Click handler
+// Click handler with critical hits
 function handleClick() {
-    addOre(gameState.orePerClick);
-    gameState.totalClicks++;
+    let oreGained = gameState.orePerClick;
+    let isCrit = false;
 
-    if (gameState.particles) {
-        showDamageNumber(gameState.orePerClick);
-        createClickEffect();
+    // Check for critical hit
+    if (Math.random() < gameState.baseCritChance) {
+        oreGained *= gameState.baseCritMultiplier;
+        isCrit = true;
+        gameState.criticalHits++;
+        gameState.currentCritStreak++;
+
+        // Track consecutive crits
+        if (gameState.currentCritStreak > gameState.consecutiveCrits) {
+            gameState.consecutiveCrits = gameState.currentCritStreak;
+        }
+    } else {
+        gameState.currentCritStreak = 0;
     }
 
+    addOre(oreGained);
+    gameState.totalClicks++;
+
+    // Record this click timestamp (ms) for clicks-per-second tracking
+    const __clickNow = Date.now();
+    gameState.clickTimestamps.push(__clickNow);
+
+    if (gameState.particles) {
+        showDamageNumber(oreGained, isCrit);
+        createClickEffect();
+        createClickParticles(); // Add particle effects
+
+        if (isCrit) {
+            showCriticalHitEffect();
+        }
+    }
+
+    checkAchievements();
     checkMissions();
     updateUI();
 }
 
 // Show floating damage number
-function showDamageNumber(amount) {
+function showDamageNumber(amount, isCrit = false) {
     const container = $('#damage-numbers');
     const number = $('<div class="damage-number">').text('+' + formatNumber(amount));
+
+    if (isCrit) {
+        number.addClass('critical-hit');
+    }
 
     const x = Math.random() * 300 - 150;
     const y = Math.random() * 50 - 25;
@@ -198,10 +296,118 @@ function showDamageNumber(amount) {
     setTimeout(() => number.remove(), 1000);
 }
 
+// Show critical hit effect
+function showCriticalHitEffect() {
+    // Screen flash
+    $('body').addClass('crit-flash');
+    setTimeout(() => $('body').removeClass('crit-flash'), 150);
+
+    // Explosion rings
+    const container = $('#damage-numbers');
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const ring = $('<div class="crit-ring">');
+            container.append(ring);
+            setTimeout(() => ring.remove(), 600);
+        }, i * 100);
+    }
+}
+
 // Create click visual effect
 function createClickEffect() {
     $('#ore-crystal').addClass('clicked');
     setTimeout(() => $('#ore-crystal').removeClass('clicked'), 100);
+}
+
+// Create click particles based on ore tier
+function createClickParticles() {
+    // Check if particles are enabled
+    if (!gameState.particles) return;
+
+    const currentOreIndex = gameState.currentOreIndex;
+    const currentOre = GAME_DATA.ores[currentOreIndex];
+
+    // Determine particle type and count based on ore tier
+    let particleClass, particleSymbol, particleCount, energyLevel;
+
+    if (currentOreIndex < 7) {
+        // Common Metals (0-6): Dust
+        particleClass = 'particle-dust';
+        particleSymbol = 'particle-symbol-dust';
+        particleCount = 3 + Math.floor(Math.random() * 3); // 3-5 particles
+        energyLevel = 1;
+    } else if (currentOreIndex < 14) {
+        // Precious Metals (7-13): Rubble
+        particleClass = 'particle-rubble';
+        particleSymbol = 'particle-symbol-rubble';
+        particleCount = 4 + Math.floor(Math.random() * 4); // 4-7 particles
+        energyLevel = 1.2;
+    } else if (currentOreIndex < 21) {
+        // Gemstones (14-20): Small Sparks
+        particleClass = 'particle-spark-small';
+        particleSymbol = 'particle-symbol-spark';
+        particleCount = 5 + Math.floor(Math.random() * 4); // 5-8 particles
+        energyLevel = 1.5;
+    } else if (currentOreIndex < 28) {
+        // Rare Minerals (21-27): Medium Sparks
+        particleClass = 'particle-spark-medium';
+        particleSymbol = 'particle-symbol-star';
+        particleCount = 6 + Math.floor(Math.random() * 5); // 6-10 particles
+        energyLevel = 2;
+    } else {
+        // Eldritch Materials (28+): Intense Sparks
+        particleClass = 'particle-spark-intense';
+        particleSymbol = 'particle-symbol-energy';
+        particleCount = 8 + Math.floor(Math.random() * 7); // 8-14 particles
+        energyLevel = 3;
+    }
+
+    const container = $('#damage-numbers');
+
+    // For eldritch materials, add energy ring effect
+    if (currentOreIndex >= 28 && energyLevel >= 3) {
+        const ring = $('<div class="eldritch-ring">')
+            .css('color', currentOre.color);
+        container.append(ring);
+        setTimeout(() => ring.remove(), 600);
+    }
+
+    // Spawn particles
+    for (let i = 0; i < particleCount; i++) {
+        const particle = $('<div>')
+            .addClass('click-particle')
+            .addClass(particleClass)
+            .addClass(particleSymbol);
+
+        // Random explosion direction and distance
+        const angle = (Math.random() * 360) * (Math.PI / 180);
+        const distance = (50 + Math.random() * 100) * energyLevel;
+        const px = Math.cos(angle) * distance;
+        const py = Math.sin(angle) * distance;
+        const rotation = Math.random() * 720 - 360;
+
+        // Add slight color variation for visual interest
+        const colorVariation = 0.85 + Math.random() * 0.3; // 0.85 to 1.15
+
+        // Set CSS custom properties for animation
+        particle.css({
+            left: '50%',
+            top: '50%',
+            '--px': `${px}px`,
+            '--py': `${py}px`,
+            '--rotation': `${rotation}deg`,
+            color: currentOre.color,
+            filter: `brightness(${colorVariation})`
+        });
+
+        // Stagger particle creation slightly
+        setTimeout(() => {
+            container.append(particle);
+            // Remove after animation completes
+            const duration = energyLevel > 2 ? 900 : 800;
+            setTimeout(() => particle.remove(), duration);
+        }, i * 15); // 15ms delay between each particle
+    }
 }
 
 // Buy tool (level up)
@@ -209,12 +415,12 @@ function buyTool(toolId, levels = 1) {
     const tool = GameDataHelper.getTool(toolId);
     if (!tool) return false;
 
-    // Check if tool is unlocked
-    if (!GameDataHelper.isToolUnlocked(toolId, gameState.tools)) {
+    const currentLevel = gameState.tools[toolId];
+
+    // Check if tool is unlocked ONLY if it's at level 0 (first purchase)
+    if (currentLevel === 0 && !GameDataHelper.isToolUnlocked(toolId, gameState.tools)) {
         return false;
     }
-
-    const currentLevel = gameState.tools[toolId];
 
     // Can't exceed max level
     if (currentLevel >= MAX_TOOL_LEVEL) return false;
@@ -300,6 +506,7 @@ function buyPrestigeUpgrade(upgradeId) {
 
     if (gameState.madness >= upgrade.cost) {
         gameState.madness -= upgrade.cost;
+        gameState.totalMadnessSpent += upgrade.cost; // Track for ascension
         gameState.prestigeUpgrades.push(upgradeId);
         updateCalculations();
         updateUI();
@@ -357,10 +564,293 @@ function prestige() {
     });
 
     updateCalculations();
+    checkAchievements();
     checkMissions();
     updateUI();
     renderAllLists(); // Re-render everything after prestige
     showNotification(`Prestige complete! Gained ${madnessGain} Madness!`);
+}
+
+// Calculate Cosmic Power gain on ascension
+function calculateCosmicPowerGain() {
+    return ASCENSION_DATA.calculateCosmicPower(gameState.totalMadnessSpent);
+}
+
+// Ascension (2nd prestige layer)
+function ascend() {
+    const cosmicGain = calculateCosmicPowerGain();
+
+    if (cosmicGain <= 0) {
+        showNotification('You need to spend more Madness to gain Cosmic Power!');
+        return;
+    }
+
+    if (gameState.prestiges < ASCENSION_DATA.minPrestiges) {
+        showNotification(`You need at least ${ASCENSION_DATA.minPrestiges} prestiges to ascend!`);
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to ASCEND?\n\nYou will gain ${cosmicGain} Cosmic Power but lose ALL Madness and restart all prestiges.\n\nRelics and Cosmic Upgrades are kept forever.`)) {
+        return;
+    }
+
+    // Complete reset
+    gameState.ore = 0;
+    gameState.totalOre = 0;
+    gameState.totalClicks = 0;
+    gameState.currentOreIndex = 0;
+    gameState.madness = 0;
+    gameState.prestiges = 0;
+
+    // Reset tools
+    GAME_DATA.tools.forEach(tool => {
+        gameState.tools[tool.id] = 0;
+    });
+
+    gameState.upgrades = [];
+    gameState.prestigeUpgrades = [];
+    // Relics and ascensionUpgrades persist!
+
+    // Add cosmic power
+    gameState.cosmicPower += cosmicGain;
+    gameState.ascensions++;
+
+    updateCalculations();
+    checkAchievements();
+    checkMissions();
+    updateUI();
+    renderAllLists();
+    showNotification(`Ascension complete! Gained ${cosmicGain} Cosmic Power!`);
+}
+
+// Buy ascension upgrade
+function buyAscensionUpgrade(upgradeId) {
+    const upgrade = ASCENSION_DATA.upgrades.find(u => u.id === upgradeId);
+    if (!upgrade) return false;
+
+    // Check if already owned
+    if (gameState.ascensionUpgrades.includes(upgradeId)) {
+        return false;
+    }
+
+    // Check requirement
+    if (upgrade.requirement && !gameState.ascensionUpgrades.includes(upgrade.requirement)) {
+        showNotification(`Requires ${ASCENSION_DATA.upgrades.find(u => u.id === upgrade.requirement).name}`);
+        return false;
+    }
+
+    // Check cost
+    if (gameState.cosmicPower < upgrade.cost) {
+        return false;
+    }
+
+    // Purchase
+    gameState.cosmicPower -= upgrade.cost;
+    gameState.ascensionUpgrades.push(upgradeId);
+
+    updateCalculations();
+    updateUI();
+    renderAllLists();
+    showNotification(`Purchased: ${upgrade.name}!`);
+    return true;
+}
+
+// ========================================
+// EXPEDITION SYSTEM
+// ========================================
+
+// Start an expedition
+function startExpedition(expeditionId) {
+    if (gameState.activeExpedition) {
+        showNotification('An expedition is already in progress!');
+        return false;
+    }
+
+    const expedition = EXPEDITION_DATA.expeditions.find(e => e.id === expeditionId);
+    if (!expedition) return false;
+
+    const now = Date.now();
+    gameState.activeExpedition = {
+        id: expeditionId,
+        startTime: now,
+        endTime: now + (expedition.duration * 1000)
+    };
+
+    updateUI();
+    renderExpeditions();
+    showNotification(`${expedition.name} has begun! Your workers will return in ${EXPEDITION_DATA.formatTimeRemaining(expedition.duration)}`);
+    return true;
+}
+
+// Check if expedition is complete
+function checkExpeditionCompletion() {
+    if (!gameState.activeExpedition) return;
+
+    const now = Date.now();
+    if (now >= gameState.activeExpedition.endTime) {
+        completeExpedition();
+    }
+}
+
+// Complete expedition and grant rewards
+function completeExpedition() {
+    if (!gameState.activeExpedition) return;
+
+    const expedition = EXPEDITION_DATA.expeditions.find(e => e.id === gameState.activeExpedition.id);
+    if (!expedition) {
+        gameState.activeExpedition = null;
+        return;
+    }
+
+    const rewards = EXPEDITION_DATA.calculateRewards(expedition.id, gameState);
+
+    // Grant ore reward
+    gameState.ore += rewards.ore;
+    gameState.totalOre += rewards.ore;
+
+    // Grant madness reward (if applicable)
+    if (rewards.madness > 0) {
+        gameState.madness += rewards.madness;
+    }
+
+    // Check for relic discovery
+    let relicFound = null;
+    if (Math.random() < rewards.relicChance) {
+        relicFound = EXPEDITION_DATA.selectRandomRelic(gameState, expedition.tier);
+        if (relicFound) {
+            gameState.relics.push(relicFound.id);
+        }
+    }
+
+    // Track completion
+    if (!gameState.expeditionCompletedIds) {
+        gameState.expeditionCompletedIds = [];
+    }
+    gameState.expeditionCompletedIds.push(expedition.id);
+
+    // Clear active expedition
+    gameState.activeExpedition = null;
+
+    // Build notification message
+    let message = `Expedition complete!\n\n`;
+    message += `Ore found: ${formatNumber(rewards.ore)}\n`;
+    if (rewards.madness > 0) {
+        message += `Madness gained: ${rewards.madness}\n`;
+    }
+    if (relicFound) {
+        message += `\n🔮 RELIC DISCOVERED: ${relicFound.name}! 🔮`;
+    } else {
+        message += `\nNo relics found this time...`;
+    }
+
+    showNotification(message);
+
+    // Show special relic notification
+    if (relicFound) {
+        showRelicDiscovery(relicFound);
+    }
+
+    updateCalculations();
+    checkAchievements();
+    updateUI();
+    renderAllLists();
+}
+
+// Show relic discovery notification
+function showRelicDiscovery(relic) {
+    const notification = $('<div class="relic-discovery">').html(`
+        <div class="relic-discovery-icon">🔮</div>
+        <div class="relic-discovery-info">
+            <div class="relic-discovery-title">RELIC DISCOVERED!</div>
+            <div class="relic-discovery-name">${relic.name}</div>
+            <div class="relic-discovery-desc">${relic.description}</div>
+        </div>
+    `);
+
+    $('body').append(notification);
+
+    setTimeout(() => {
+        notification.addClass('show');
+    }, 100);
+
+    setTimeout(() => {
+        notification.removeClass('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 5000);
+}
+
+// Check and unlock achievements
+function checkAchievements() {
+    if (!gameState.achievements) {
+        gameState.achievements = [];
+    }
+
+    ACHIEVEMENTS.forEach(achievement => {
+        if (gameState.achievements.includes(achievement.id)) return; // Already unlocked
+
+        let unlocked = false;
+        const req = achievement.requirement;
+
+        // Check different requirement types
+        if (req.totalClicks && gameState.totalClicks >= req.totalClicks) unlocked = true;
+        if (req.orePerClick && gameState.orePerClick >= req.orePerClick) unlocked = true;
+        if (req.orePerSecond && gameState.orePerSecond >= req.orePerSecond) unlocked = true;
+        if (req.criticalHits && gameState.criticalHits >= req.criticalHits) unlocked = true;
+        if (req.consecutiveCrits && gameState.consecutiveCrits >= req.consecutiveCrits) unlocked = true;
+        if (req.toolsPurchased) {
+            let total = 0;
+            Object.values(gameState.tools).forEach(level => total += level);
+            if (total >= req.toolsPurchased) unlocked = true;
+        }
+        if (req.maxedTools) {
+            let maxed = 0;
+            Object.values(gameState.tools).forEach(level => { if (level >= 256) maxed++; });
+            if (maxed >= req.maxedTools) unlocked = true;
+        }
+        if (req.toolsUnlocked) {
+            let unlocked_count = 0;
+            Object.keys(gameState.tools).forEach(id => { if (gameState.tools[id] > 0) unlocked_count++; });
+            if (unlocked_count >= req.toolsUnlocked) unlocked = true;
+        }
+        if (req.prestiges && gameState.prestiges >= req.prestiges) unlocked = true;
+        if (req.totalMadness && (gameState.madness + (gameState.prestiges * 10)) >= req.totalMadness) unlocked = true;
+        if (req.totalOre && gameState.totalOre >= req.totalOre) unlocked = true;
+        if (req.relicsOwned && gameState.relics.length >= req.relicsOwned) unlocked = true;
+        if (req.upgradesOwned && gameState.upgrades.length >= req.upgradesOwned) unlocked = true;
+        if (req.prestigeUpgradesOwned && gameState.prestigeUpgrades.length >= req.prestigeUpgradesOwned) unlocked = true;
+        if (req.oreIndex && gameState.currentOreIndex >= req.oreIndex) unlocked = true;
+
+        if (unlocked) {
+            gameState.achievements.push(achievement.id);
+            showAchievementUnlock(achievement);
+            calculateMultipliers(); // Recalculate bonuses
+        }
+    });
+}
+
+// Show achievement unlock notification
+function showAchievementUnlock(achievement) {
+    console.log(`🏆 Achievement Unlocked: ${achievement.name}`);
+
+    const notification = $('<div class="achievement-popup">').html(`
+        <div class="achievement-icon">${achievement.icon}</div>
+        <div class="achievement-info">
+            <div class="achievement-title">Achievement Unlocked!</div>
+            <div class="achievement-name">${achievement.name}</div>
+            <div class="achievement-desc">${achievement.description}</div>
+        </div>
+    `);
+
+    $('body').append(notification);
+
+    setTimeout(() => {
+        notification.addClass('show');
+    }, 100);
+
+    setTimeout(() => {
+        notification.removeClass('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 4000);
 }
 
 // Check and complete missions
@@ -441,8 +931,8 @@ function gameLoop() {
     const deltaTime = (now - gameState.lastTick) / 1000; // Convert to seconds
     gameState.lastTick = now;
 
-    // Add passive ore production
-    if (gameState.orePerSecond > 0) {
+    // Add passive ore production only when the game is active and visible.
+    if (isGameActive() && gameState.orePerSecond > 0) {
         addOre(gameState.orePerSecond * deltaTime);
     }
 
@@ -452,14 +942,59 @@ function gameLoop() {
         gameState.lastSave = now;
     }
 
+    // Only progress idle systems while the game is active and visible.
+    if (isGameActive()) {
+        // Check expedition completion
+        checkExpeditionCompletion();
+    }
+
+    updateClickStats();
     updateUI();
+}
+
+// Update click statistics (compute CPS from recent timestamps and track peak)
+function updateClickStats() {
+    const now = Date.now();
+    const cutoff = now - 1000; // 1 second window
+    // keep only timestamps within the last second
+    gameState.clickTimestamps = gameState.clickTimestamps.filter(ts => ts >= cutoff);
+    gameState.clicksPerSecond = gameState.clickTimestamps.length;
+    // Update peak and trigger visual effect when surpassed
+    if (gameState.clicksPerSecond > gameState.peakClicksPerSecond) {
+        gameState.peakClicksPerSecond = gameState.clicksPerSecond;
+        createPeakSurpassEffect();
+    }
+}
+
+// Visual/particle effect when player surpasses previous CPS peak
+function createPeakSurpassEffect() {
+    try {
+        // Small burst text near the damage numbers container
+        const container = $('#damage-numbers');
+        const peakElem = $('<div class="peak-burst">').text('PEAK! ✨').css({
+            position: 'absolute',
+            left: '50%',
+            top: '20%',
+            transform: 'translate(-50%, -50%)',
+            color: '#FFD700',
+            'font-weight': 'bold',
+            'text-shadow': '0 0 12px rgba(255,215,0,0.9)',
+            'pointer-events': 'none',
+            'z-index': 9999
+        });
+        container.append(peakElem);
+        setTimeout(() => peakElem.fadeOut(300, () => peakElem.remove()), 800);
+    } catch (e) {
+        // ignore if DOM not present
+        console.warn('Peak effect failed', e);
+    }
 }
 
 // Update UI
 function updateUI() {
     const currentOre = GAME_DATA.ores[gameState.currentOreIndex];
 
-    // Update stats
+    // Update desktop stats
     $('#current-ore').text(currentOre.name).css('color', currentOre.color);
     $('#ore-description').text(currentOre.description);
     $('#ore-count').text(formatNumber(gameState.ore));
@@ -470,24 +1005,256 @@ function updateUI() {
     $('#total-clicks').text(formatNumber(gameState.totalClicks));
     $('#total-ore').text(formatNumber(gameState.totalOre));
 
-    // Update prestige info
+    // Ensure clicks-per-second display exists (insert next to ore-per-second if missing)
+    if ($('#clicks-per-second').length === 0) {
+        try {
+            $('#ore-per-second').after($('<div class="stat-row clicks-row">').html(`Clicks/s: <span id="clicks-per-second">0</span> (<span id="peak-clicks-per-second">0</span> peak)`));
+        } catch (e) {}
+    }
+    $('#clicks-per-second').text(formatNumber(gameState.clicksPerSecond));
+    $('#peak-clicks-per-second').text(formatNumber(gameState.peakClicksPerSecond));
+
+    // Mobile stats: show CPS under mobile ore/sec if mobile UI exists
+    if ($('#mobile-ore-per-second').length && $('#mobile-clicks-per-second').length === 0) {
+        $('#mobile-ore-per-second').after($('<div id="mobile-clicks-per-second-row">').html(`Clicks/s: <span id="mobile-clicks-per-second">0</span>`));
+    }
+    if ($('#mobile-clicks-per-second').length) {
+        $('#mobile-clicks-per-second').text(formatNumber(gameState.clicksPerSecond));
+    }
+
+    // Update mobile stats bar
+    $('#mobile-ore-count').text(formatNumber(gameState.ore));
+    $('#mobile-current-ore').text(currentOre.name.split(' ')[0]); // Just first word (e.g., "Iron")
+    $('#mobile-ore-per-second').text(formatNumber(gameState.orePerSecond));
+    $('#mobile-madness-count').text(formatNumber(gameState.madness));
+
+    // Update prestige info (both desktop and mobile)
     const madnessGain = calculateMadnessGain();
-    $('#madness-on-prestige').text(formatNumber(madnessGain));
+    $('#madness-on-prestige, #mobile-madness-on-prestige').text(formatNumber(madnessGain));
     const madnessMult = 1 + (gameState.prestiges * 0.1);
-    $('#madness-multiplier').text(madnessMult.toFixed(1) + 'x');
+    $('#madness-multiplier, #mobile-madness-multiplier').text(madnessMult.toFixed(1) + 'x');
 
-    // Enable/disable prestige button
-    $('#prestige-btn').prop('disabled', madnessGain <= 0);
+    // Enable/disable prestige button (both desktop and mobile)
+    $('#prestige-btn, #mobile-prestige-btn').prop('disabled', madnessGain <= 0);
 
-    // Update crystal color
+    // Update ascension info
+    const cosmicGain = calculateCosmicPowerGain();
+    $('#cosmic-on-ascension').text(cosmicGain);
+    $('#cosmic-power').text(formatNumber(gameState.cosmicPower));
+    $('#ascension-prestiges').text(gameState.prestiges);
+    $('#ascension-btn').prop('disabled', cosmicGain <= 0 || gameState.prestiges < ASCENSION_DATA.minPrestiges);
+
+    // Show/hide ascension tab (unlock at 10 prestiges)
+    if (gameState.prestiges >= ASCENSION_DATA.minPrestiges) {
+        $('#ascension-tab-btn').show();
+    }
+
+    // Update expedition progress if active
+    if (gameState.activeExpedition) {
+        const expedition = EXPEDITION_DATA.expeditions.find(e => e.id === gameState.activeExpedition.id);
+        if (expedition) {
+            const now = Date.now();
+            const remaining = Math.max(0, gameState.activeExpedition.endTime - now);
+            const progress = 1 - (remaining / (expedition.duration * 1000));
+
+            $('#expedition-progress-fill').css('width', (progress * 100) + '%');
+            $('#expedition-time-remaining').text(`Time Remaining: ${EXPEDITION_DATA.formatTimeRemaining(remaining / 1000)}`);
+        }
+    }
+
+    // Update crystal SVG based on current ore
+    updateCrystalSVG(currentOre);
+
+    // Update crystal color (kept for backward compatibility)
     $('.crystal-core').css('color', currentOre.color);
     $('.crystal-glow').css('background', `radial-gradient(circle, ${currentOre.color}40 0%, transparent 70%)`);
+
+    // Update theme colors based on current ore
+    // Pass glowStrength if present on ore; fallback logic inside updateThemeColor
+    updateThemeColor(currentOre.color, currentOre.textColor, currentOre.glowStrength);
+
+    // Update button states (enable/disable based on resources)
+    updateButtonStates();
+
+    // Ensure panel mouse-follow glow handlers are attached (idempotent)
+    setupPanelGlows();
+}
+
+// Update crystal SVG display
+function updateCrystalSVG(currentOre) {
+    const crystalCore = $('.crystal-core');
+
+    // Generate SVG for current ore
+    const svgContent = CrystalSVG.generate(currentOre.id, currentOre.color, gameState.currentOreIndex);
+
+    // Replace the emoji symbol with SVG
+    crystalCore.html(svgContent);
+}
+
+// Update global theme color based on ore
+function updateThemeColor(oreColor, textColor, glowStrength) {
+    // Convert hex to rgb components
+    const r = parseInt(oreColor.slice(1, 3), 16);
+    const g = parseInt(oreColor.slice(3, 5), 16);
+    const b = parseInt(oreColor.slice(5, 7), 16);
+
+    // Default glowStrength when not supplied: make Common Metals subtly non-glowing, then progressively increase from Silver onwards
+    if (typeof glowStrength !== 'number') {
+        try {
+            const idx = (typeof gameState !== 'undefined' && gameState.currentOreIndex) ? gameState.currentOreIndex : 0;
+            const maxIdx = GAME_DATA.ores.length - 1 || 1;
+            const silverStart = 7; // index where 'Silver' sits (0-based)
+
+            if (idx < silverStart) {
+                // Common Metals: keep glow low/subtle
+                glowStrength = 0.55; // nearly no neon
+            } else {
+                // Progressive scale from silverStart..maxIdx
+                const t = (idx - silverStart) / Math.max(1, (maxIdx - silverStart)); // 0..1
+                // Map to a gentle exponential curve for nicer progression
+                const min = 1.0;
+                const max = 2.6; // strongest glow for end-game
+                glowStrength = min + (max - min) * Math.pow(t, 1.05);
+            }
+        } catch (e) {
+            glowStrength = 1;
+        }
+    }
+
+    // Base alphas
+    const oreGlowAlpha = 0.32 * glowStrength;
+    const panelGlowAlpha = 0.28 * glowStrength;
+    const panelGlowStrongAlpha = 0.72 * Math.min(1.6, glowStrength);
+
+    // Update CSS custom properties so all panels match the ore accent colour
+    document.documentElement.style.setProperty('--ore-color', oreColor);
+    document.documentElement.style.setProperty('--ore-glow', `rgba(${r}, ${g}, ${b}, ${oreGlowAlpha})`);
+    document.documentElement.style.setProperty('--ore-text-color', textColor || '#FFFFFF');
+
+    // Expose RGB and alpha separately so JS can tune opacity per-panel for mouse-follow
+    document.documentElement.style.setProperty('--panel-glow-rgb', `${r}, ${g}, ${b}`);
+    document.documentElement.style.setProperty('--panel-glow-alpha', String(panelGlowAlpha));
+    document.documentElement.style.setProperty('--panel-glow-strong-alpha', String(panelGlowStrongAlpha));
+}
+
+// Attach mousemove handlers to panels to implement mouse-follow glow and per-panel intensity
+function setupPanelGlows() {
+    if (!window.__panelGlowsInitialized) {
+        const panels = document.querySelectorAll('.panel');
+        panels.forEach(el => {
+            // initialize defaults
+            el.style.setProperty('--panel-glow-x', '50%');
+            el.style.setProperty('--panel-glow-y', '50%');
+            el.style.setProperty('--panel-glow-opacity', '0.65'); // base multiplier
+
+            el.addEventListener('mousemove', (e) => {
+                const rect = el.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                el.style.setProperty('--panel-glow-x', x + '%');
+                el.style.setProperty('--panel-glow-y', y + '%');
+
+                // distance from center (0..1)
+                const dx = (x - 50) / 50;
+                const dy = (y - 50) / 50;
+                const dist = Math.min(1, Math.sqrt(dx*dx + dy*dy));
+
+                // intensity: closer to center -> stronger; clamp 0.4..1.2 and factor by global strength stored in panel-glow-alpha
+                const intensity = (1.1 - dist * 0.9); // ~1.1 -> 0.2
+                // set a per-panel opacity multiplier
+                el.style.setProperty('--panel-glow-opacity', String(Math.max(0.45, Math.min(1.2, intensity))));
+            });
+
+            el.addEventListener('mouseleave', () => {
+                // reset to center with a smooth transition
+                el.style.setProperty('--panel-glow-x', '50%');
+                el.style.setProperty('--panel-glow-y', '50%');
+                el.style.setProperty('--panel-glow-opacity', '0.65');
+            });
+        });
+
+        window.__panelGlowsInitialized = true;
+    }
+}
+
+
+// Update button states based on current resources
+function updateButtonStates() {
+    // Update tool buy buttons
+    GAME_DATA.tools.forEach(tool => {
+        const level = gameState.tools[tool.id];
+        const isMaxed = level >= MAX_TOOL_LEVEL;
+
+        if (!isMaxed) {
+            // Find the +1 button for this tool
+            const cost1 = GameDataHelper.getToolCost(tool.id, level);
+            $(`#tools-list .tool-card`).each(function() {
+                const cardText = $(this).find('.item-name').text();
+                if (cardText.includes(tool.name)) {
+                    $(this).find('.buy-btn').first().prop('disabled', gameState.ore < cost1);
+
+                    // +10 button
+                    let cost10 = 0;
+                    const maxLevels = Math.min(10, MAX_TOOL_LEVEL - level);
+                    for (let i = 0; i < maxLevels; i++) {
+                        cost10 += GameDataHelper.getToolCost(tool.id, level + i);
+                    }
+                    $(this).find('.buy-btn').eq(1).prop('disabled', gameState.ore < cost10 || maxLevels === 0);
+                }
+            });
+        }
+    });
+
+    // Update upgrade buy buttons
+    GAME_DATA.upgrades.forEach(upgrade => {
+        const owned = gameState.upgrades.includes(upgrade.id);
+        const locked = upgrade.requirement && !gameState.upgrades.includes(upgrade.requirement);
+
+        if (!owned && !locked) {
+            $(`#upgrades-list .item-card`).each(function() {
+                const cardText = $(this).find('.item-name').text();
+                if (cardText === upgrade.name) {
+                    $(this).find('.buy-btn').prop('disabled', gameState.ore < upgrade.cost);
+                }
+            });
+        }
+    });
+
+    // Update relic buy buttons
+    GAME_DATA.relics.forEach(relic => {
+        const owned = gameState.relics.includes(relic.id);
+
+        if (!owned) {
+            $(`#relics-list .item-card`).each(function() {
+                const cardText = $(this).find('.item-name').text();
+                if (cardText.includes(relic.name)) {
+                    $(this).find('.buy-btn').prop('disabled', gameState.ore < relic.cost);
+                }
+            });
+        }
+    });
+
+    // Update prestige upgrade buy buttons
+    GAME_DATA.prestigeUpgrades.forEach(upgrade => {
+        const owned = gameState.prestigeUpgrades.includes(upgrade.id);
+
+        if (!owned) {
+            $(`#prestige-upgrades-list .item-card`).each(function() {
+                const cardText = $(this).find('.item-name').text();
+                if (cardText === upgrade.name) {
+                    $(this).find('.buy-btn').prop('disabled', gameState.madness < upgrade.cost);
+                }
+            });
+        }
+    });
 }
 
 // Render tools list
 function renderTools() {
     const container = $('#tools-list');
+    const mobileContainer = $('#mobile-tools-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.tools.forEach(tool => {
         const level = gameState.tools[tool.id];
@@ -495,12 +1262,15 @@ function renderTools() {
         const isMaxed = level >= MAX_TOOL_LEVEL;
         const rarity = getRarityForLevel(level);
 
+        // Hide locked tools - only show unlocked tools
+        if (!isUnlocked) {
+            return; // Skip rendering this tool
+        }
+
         const card = $('<div class="item-card tool-card">');
 
-        // Lock or max level status
-        if (!isUnlocked) {
-            card.addClass('locked');
-        } else if (isMaxed) {
+        // Max level status
+        if (isMaxed) {
             card.addClass('maxed');
         }
 
@@ -517,14 +1287,7 @@ function renderTools() {
 
         // Level and rarity display
         const levelInfo = $('<span class="item-level">');
-        if (!isUnlocked) {
-            // Show unlock requirement
-            const toolIndex = GAME_DATA.tools.findIndex(t => t.id === tool.id);
-            const prevTool = GAME_DATA.tools[toolIndex - 1];
-            const prevLevel = gameState.tools[prevTool.id] || 0;
-            levelInfo.text(`🔒 Need ${prevTool.name} Lv${RARITY_TIERS.EPIC.requiredLevel} (${prevLevel}/${RARITY_TIERS.EPIC.requiredLevel})`);
-            levelInfo.css('color', '#FF4444');
-        } else if (isMaxed) {
+        if (isMaxed) {
             levelInfo.text(`Lv ${level}/${MAX_TOOL_LEVEL} MAX`);
             levelInfo.css('color', '#FFD700');
         } else {
@@ -538,7 +1301,7 @@ function renderTools() {
         const description = $('<div class="item-description">').text(tool.description);
 
         // Production and cost
-        if (isUnlocked && !isMaxed) {
+        if (!isMaxed) {
             const production = GameDataHelper.getToolProduction(tool.id, level);
             const totalProduction = production * GAME_DATA.ores[gameState.currentOreIndex].baseValue *
                                    gameState.productionMultiplier * gameState.toolEfficiencyMultiplier *
@@ -572,7 +1335,8 @@ function renderTools() {
             const progressBar = createRarityProgressBar(level);
 
             card.append(header, description, stats, progressBar, buyBtn, buy10Btn);
-        } else if (isMaxed) {
+        } else {
+            // Maxed
             card.append(header, description);
             const maxMessage = $('<div class="item-description">').text('✨ Maximum Level Reached! ✨').css({
                 'color': '#FFD700',
@@ -580,11 +1344,10 @@ function renderTools() {
                 'font-weight': 'bold'
             });
             card.append(maxMessage);
-        } else {
-            card.append(header, description);
         }
 
         container.append(card);
+        mobileContainer.append(card.clone(true)); // Clone with events for mobile
     });
 }
 
@@ -644,15 +1407,21 @@ function createRarityProgressBar(currentLevel) {
 // Render upgrades list
 function renderUpgrades() {
     const container = $('#upgrades-list');
+    const mobileContainer = $('#mobile-upgrades-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.upgrades.forEach(upgrade => {
         const owned = gameState.upgrades.includes(upgrade.id);
         const locked = upgrade.requirement && !gameState.upgrades.includes(upgrade.requirement);
 
+        // Hide locked upgrades - only show owned or available to buy
+        if (locked) {
+            return; // Skip rendering this upgrade
+        }
+
         const card = $('<div class="item-card">');
         if (owned) card.addClass('maxed');
-        if (locked) card.addClass('locked');
 
         const header = $('<div class="item-header">');
         header.append($('<span class="item-name">').text(upgrade.name));
@@ -663,8 +1432,6 @@ function renderUpgrades() {
         const buyBtn = $('<button class="buy-btn">');
         if (owned) {
             buyBtn.text('Purchased').prop('disabled', true);
-        } else if (locked) {
-            buyBtn.text('Locked').prop('disabled', true);
         } else {
             buyBtn.text(`Buy - 💰 ${formatNumber(upgrade.cost)}`);
             buyBtn.prop('disabled', gameState.ore < upgrade.cost);
@@ -673,52 +1440,64 @@ function renderUpgrades() {
 
         card.append(header, description, buyBtn);
         container.append(card);
+        mobileContainer.append(card.clone(true));
     });
 }
 
 // Render relics list
 function renderRelics() {
     const container = $('#relics-list');
+    const mobileContainer = $('#mobile-relics-list');
     container.empty();
+    mobileContainer.empty();
 
-    GAME_DATA.relics.forEach(relic => {
-        const owned = gameState.relics.includes(relic.id);
+    // Only show discovered relics
+    const discoveredRelics = GAME_DATA.relics.filter(relic => gameState.relics.includes(relic.id));
 
+    if (discoveredRelics.length === 0) {
+        const emptyMessage = $('<div class="empty-list-message">').html(`
+            <p>🗺️ No relics discovered yet...</p>
+            <p>Send expeditions to uncover ancient artifacts!</p>
+        `);
+        container.append(emptyMessage);
+        mobileContainer.append(emptyMessage.clone());
+        return;
+    }
+
+    discoveredRelics.forEach(relic => {
         const card = $('<div class="item-card">');
-        if (owned) card.addClass('maxed');
+        card.addClass('maxed'); // All shown relics are owned
 
         const header = $('<div class="item-header">');
         header.append($('<span class="item-name">').text(`🔮 ${relic.name}`));
-        if (owned) header.append($('<span class="item-level">').text('✓ Owned'));
+        header.append($('<span class="item-level">').text('✓ Discovered'));
 
         const description = $('<div class="item-description">').text(relic.description);
 
-        const buyBtn = $('<button class="buy-btn">');
-        if (owned) {
-            buyBtn.text('Discovered').prop('disabled', true);
-        } else {
-            buyBtn.text(`Discover - 💰 ${formatNumber(relic.cost)}`);
-            buyBtn.prop('disabled', gameState.ore < relic.cost);
-            buyBtn.on('click', () => buyRelic(relic.id));
-        }
-
-        card.append(header, description, buyBtn);
+        card.append(header, description);
         container.append(card);
+        mobileContainer.append(card.clone(true));
     });
 }
 
 // Render prestige upgrades list
 function renderPrestigeUpgrades() {
     const container = $('#prestige-upgrades-list');
+    const mobileContainer = $('#mobile-prestige-upgrades-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.prestigeUpgrades.forEach(upgrade => {
         const owned = gameState.prestigeUpgrades.includes(upgrade.id);
         const locked = upgrade.requirement && !gameState.prestigeUpgrades.includes(upgrade.requirement);
 
+        // Hide locked prestige upgrades - only show owned or available to buy
+        if (locked) {
+            return; // Skip rendering this upgrade
+        }
+
         const card = $('<div class="item-card">');
         if (owned) card.addClass('maxed');
-        if (locked) card.addClass('locked');
 
         const header = $('<div class="item-header">');
         header.append($('<span class="item-name">').text(upgrade.name));
@@ -729,8 +1508,6 @@ function renderPrestigeUpgrades() {
         const buyBtn = $('<button class="buy-btn">');
         if (owned) {
             buyBtn.text('Purchased').prop('disabled', true);
-        } else if (locked) {
-            buyBtn.text('Locked').prop('disabled', true);
         } else {
             buyBtn.text(`Buy - 🌑 ${formatNumber(upgrade.cost)} Madness`);
             buyBtn.prop('disabled', gameState.madness < upgrade.cost);
@@ -739,13 +1516,116 @@ function renderPrestigeUpgrades() {
 
         card.append(header, description, buyBtn);
         container.append(card);
+        mobileContainer.append(card.clone(true));
     });
+}
+
+// Render ascension upgrades list
+function renderAscensionUpgrades() {
+    const container = $('#ascension-upgrades-list');
+    container.empty();
+
+    // Group by tier
+    const tiers = [1, 2, 3, 4];
+    tiers.forEach(tier => {
+        const tierUpgrades = ASCENSION_DATA.upgrades.filter(u => u.tier === tier);
+        if (tierUpgrades.length === 0) return;
+
+        const tierHeader = $('<div class="tier-header">').text(`Tier ${tier}`);
+        container.append(tierHeader);
+
+        tierUpgrades.forEach(upgrade => {
+            const owned = gameState.ascensionUpgrades.includes(upgrade.id);
+            const locked = upgrade.requirement && !gameState.ascensionUpgrades.includes(upgrade.requirement);
+
+            // Hide locked ascension upgrades - only show owned or available to buy
+            if (locked) {
+                return; // Skip rendering this upgrade
+            }
+
+            const card = $('<div class="item-card">');
+            if (owned) card.addClass('maxed');
+
+            const header = $('<div class="item-header">');
+            header.append($('<span class="item-icon">').text(upgrade.icon));
+            header.append($('<span class="item-name">').text(upgrade.name));
+            if (owned) header.append($('<span class="item-level">').text('✓ Owned'));
+
+            const description = $('<div class="item-description">').text(upgrade.description);
+
+            const buyBtn = $('<button class="buy-btn">');
+            if (owned) {
+                buyBtn.text('Purchased').prop('disabled', true);
+            } else {
+                buyBtn.text(`Buy - 🌌 ${upgrade.cost} Cosmic Power`);
+                buyBtn.prop('disabled', gameState.cosmicPower < upgrade.cost);
+                buyBtn.on('click', () => buyAscensionUpgrade(upgrade.id));
+            }
+
+            card.append(header, description, buyBtn);
+            container.append(card);
+        });
+    });
+}
+
+// Render expeditions list
+function renderExpeditions() {
+    const container = $('#expedition-list');
+    container.empty();
+
+    const activeExpedition = $('#active-expedition');
+
+    if (gameState.activeExpedition) {
+        // Show active expedition
+        activeExpedition.show();
+
+        const expedition = EXPEDITION_DATA.expeditions.find(e => e.id === gameState.activeExpedition.id);
+        const now = Date.now();
+        const remaining = Math.max(0, gameState.activeExpedition.endTime - now);
+        const progress = 1 - (remaining / (expedition.duration * 1000));
+
+        $('#expedition-name').text(`${expedition.icon} ${expedition.name}`);
+        $('#expedition-progress-fill').css('width', (progress * 100) + '%');
+        $('#expedition-time-remaining').text(`Time Remaining: ${EXPEDITION_DATA.formatTimeRemaining(remaining / 1000)}`);
+    } else {
+        // Hide active expedition display
+        activeExpedition.hide();
+
+        // Show available expeditions
+        EXPEDITION_DATA.expeditions.forEach(expedition => {
+            const rewards = EXPEDITION_DATA.calculateRewards(expedition.id, gameState);
+
+            const card = $('<div class="item-card expedition-card">');
+
+            const header = $('<div class="item-header">');
+            header.append($('<span class="item-name">').text(`${expedition.icon} ${expedition.name}`));
+            header.append($('<span class="item-level">').text(EXPEDITION_DATA.formatTimeRemaining(expedition.duration)));
+
+            const description = $('<div class="item-description">').text(expedition.description);
+
+            // Rewards display
+            const rewardsDiv = $('<div class="expedition-rewards">');
+            rewardsDiv.append($('<div>').html(`💰 <strong>${formatNumber(rewards.ore)}</strong> ore`));
+            if (rewards.madness > 0) {
+                rewardsDiv.append($('<div>').html(`🌑 <strong>${rewards.madness}</strong> madness`));
+            }
+            rewardsDiv.append($('<div>').html(`🔮 <strong>${Math.floor(rewards.relicChance * 100)}%</strong> relic chance`));
+
+            const startBtn = $('<button class="buy-btn expedition-btn">').text('Launch Expedition');
+            startBtn.on('click', () => startExpedition(expedition.id));
+
+            card.append(header, description, rewardsDiv, startBtn);
+            container.append(card);
+        });
+    }
 }
 
 // Render missions list
 function renderMissions() {
     const container = $('#missions-list');
+    const mobileContainer = $('#mobile-missions-list');
     container.empty();
+    mobileContainer.empty();
 
     GAME_DATA.missions.forEach(mission => {
         const completed = gameState.missions[mission.id];
@@ -767,6 +1647,7 @@ function renderMissions() {
 
         card.append(header, description, reward);
         container.append(card);
+        mobileContainer.append(card.clone(true));
     });
 }
 
@@ -775,12 +1656,20 @@ function renderAllLists() {
     renderTools();
     renderUpgrades();
     renderRelics();
+    renderExpeditions();
     renderPrestigeUpgrades();
+    renderAscensionUpgrades();
     renderMissions();
 }
 
 // Save game
 function saveGame() {
+    // Don't save if we're in the middle of resetting
+    if (isResetting) {
+        console.log('Save blocked - reset in progress');
+        return;
+    }
+
     const saveData = {
         version: '1.0',
         state: gameState
@@ -823,7 +1712,13 @@ function resetGame() {
         return;
     }
 
+    // Set flag to prevent auto-save during reset
+    isResetting = true;
+
+    // Clear localStorage
     localStorage.removeItem('eldritchExcavation_save');
+
+    // Reload immediately (auto-save is now blocked by isResetting flag)
     location.reload();
 }
 
@@ -866,12 +1761,61 @@ function initGame() {
     console.log('🌑 Eldritch Excavation - Ready!');
 }
 
+// Set up mobile drawer functionality
+function setupMobileDrawer() {
+    const drawer = $('#mobile-drawer');
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+
+    // Initially closed
+    drawer.addClass('drawer-closed');
+
+    // Handle tap/click
+    $('#drawer-handle').on('click', function(e) {
+        if (!isDragging) {
+            drawer.toggleClass('drawer-open drawer-closed');
+        }
+    });
+
+    // Handle touch drag
+    $('#drawer-handle').on('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+        isDragging = false;
+    });
+
+    $('#drawer-handle').on('touchmove', function(e) {
+        currentY = e.touches[0].clientY;
+        const deltaY = currentY - startY;
+
+        if (Math.abs(deltaY) > 10) {
+            isDragging = true;
+            e.preventDefault();
+        }
+    });
+
+    $('#drawer-handle').on('touchend', function(e) {
+        if (isDragging) {
+            const deltaY = currentY - startY;
+
+            if (deltaY > 50) {
+                // Swipe down - close drawer
+                drawer.removeClass('drawer-open').addClass('drawer-closed');
+            } else if (deltaY < -50) {
+                // Swipe up - open drawer
+                drawer.removeClass('drawer-closed').addClass('drawer-open');
+            }
+        }
+        isDragging = false;
+    });
+}
+
 // Set up event listeners
 function setupEventListeners() {
     // Main click
     $('#ore-crystal').on('click', handleClick);
 
-    // Tab navigation
+    // Desktop tab navigation
     $('.tab-btn').on('click', function() {
         const tabName = $(this).data('tab');
 
@@ -887,10 +1831,36 @@ function setupEventListeners() {
         renderAllLists();
     });
 
-    // Prestige button
-    $('#prestige-btn').on('click', prestige);
+    // Mobile tab navigation
+    $('.mobile-tab-btn').on('click', function() {
+        const tabName = $(this).data('tab');
 
-    // Footer buttons
+        // Update buttons
+        $('.mobile-tab-btn').removeClass('active');
+        $(this).addClass('active');
+
+        // Update content
+        $('.mobile-tab-content').removeClass('active');
+        $(`#mobile-${tabName}-tab`).addClass('active');
+
+        // Update drawer handle text
+        const tabText = $(this).text().trim();
+        $('#drawer-current-tab').text(tabText);
+
+        // Re-render the active tab
+        renderAllLists();
+    });
+
+    // Mobile drawer toggle
+    setupMobileDrawer();
+
+    // Prestige button (both desktop and mobile)
+    $('#prestige-btn, #mobile-prestige-btn').on('click', prestige);
+
+    // Ascension button
+    $('#ascension-btn').on('click', ascend);
+
+    // Desktop footer buttons
     $('#save-btn').on('click', () => {
         saveGame();
         showNotification('Game saved manually!');
@@ -901,6 +1871,18 @@ function setupEventListeners() {
     });
 
     $('#reset-btn').on('click', resetGame);
+
+    // Mobile footer buttons
+    $('#mobile-save-btn').on('click', () => {
+        saveGame();
+        showNotification('Game saved manually!');
+    });
+
+    $('#mobile-settings-btn').on('click', () => {
+        $('#settings-modal').removeClass('hidden');
+    });
+
+    $('#mobile-reset-btn').on('click', resetGame);
 
     // Settings modal
     $('#close-settings').on('click', () => {
@@ -925,6 +1907,20 @@ function setupEventListeners() {
             $(this).addClass('hidden');
         }
     });
+
+    // Pause idle progression when the tab is not active.
+    const updateGameActiveState = () => {
+        const visible = !document.hidden;
+        const focused = document.hasFocus();
+        gameState.isPageVisible = visible;
+        gameState.isWindowFocused = focused;
+        gameState.isGameActive = visible && focused;
+    };
+
+    document.addEventListener('visibilitychange', updateGameActiveState);
+    window.addEventListener('focus', updateGameActiveState);
+    window.addEventListener('blur', updateGameActiveState);
+    updateGameActiveState();
 
     // Keyboard shortcuts
     $(document).on('keydown', function(e) {
@@ -952,3 +1948,51 @@ $(document).ready(function() {
 $(window).on('beforeunload', function() {
     saveGame();
 });
+
+// Developer helper function to test particles at different ore tiers
+// Usage in console: testParticles(oreIndex)
+window.testParticles = function(oreIndex) {
+    if (oreIndex >= 0 && oreIndex < GAME_DATA.ores.length) {
+        gameState.currentOreIndex = oreIndex;
+        const ore = GAME_DATA.ores[oreIndex];
+        console.log(`Testing particles for: ${ore.name} (Tier ${oreIndex})`);
+        updateUI();
+        createClickParticles();
+    } else {
+        console.log(`Invalid ore index. Valid range: 0-${GAME_DATA.ores.length - 1}`);
+    }
+};
+
+// Developer helper to list all ore tiers
+window.listOres = function() {
+    console.log('Ore Tiers:');
+    GAME_DATA.ores.forEach((ore, index) => {
+        console.log(`${index}: ${ore.name} - ${ore.color}`);
+    });
+};
+
+// Developer helper to test crystal designs
+window.testCrystal = function(oreIndex) {
+    if (oreIndex >= 0 && oreIndex < GAME_DATA.ores.length) {
+        gameState.currentOreIndex = oreIndex;
+        const ore = GAME_DATA.ores[oreIndex];
+        console.log(`Displaying crystal for: ${ore.name} (Tier ${oreIndex})`);
+        updateUI();
+    } else {
+        console.log(`Invalid ore index. Valid range: 0-${GAME_DATA.ores.length - 1}`);
+    }
+};
+
+// Developer helper to cycle through all crystals
+window.cycleAllCrystals = function(delayMs = 2000) {
+    let index = 0;
+    const interval = setInterval(() => {
+        if (index >= GAME_DATA.ores.length) {
+            clearInterval(interval);
+            console.log('Crystal showcase complete!');
+            return;
+        }
+        testCrystal(index);
+        index++;
+    }, delayMs);
+};
