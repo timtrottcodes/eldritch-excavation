@@ -3,7 +3,7 @@
 // Each grants a small permanent bonus
 
 const ACHIEVEMENT_CATEGORIES = {
-    CLICKING: 'Clicking Master',
+    CLICKING: 'Tapping Master',
     PRODUCTION: 'Idle Tycoon',
     PRESTIGE: 'Madness Embracer',
     COLLECTION: 'Collector',
@@ -13,20 +13,20 @@ const ACHIEVEMENT_CATEGORIES = {
 };
 
 const ACHIEVEMENTS = [
-    // === CLICKING MASTER (20 achievements) ===
+    // === TAPPING MASTER (20 achievements) ===
     {
         id: 'clicks_100',
         name: 'First Steps',
-        description: 'Click the crystal 100 times',
+        description: 'Tap the crystal 100 times',
         category: 'CLICKING',
         requirement: { totalClicks: 100 },
-        reward: { clickPowerBonus: 0.01 }, // +1% click power
+        reward: { clickPowerBonus: 0.01 }, // +1% tap power
         icon: '👆'
     },
     {
         id: 'clicks_1000',
         name: 'Dedicated Miner',
-        description: 'Click the crystal 1,000 times',
+        description: 'Tap the crystal 1,000 times',
         category: 'CLICKING',
         requirement: { totalClicks: 1000 },
         reward: { clickPowerBonus: 0.01 },
@@ -34,8 +34,8 @@ const ACHIEVEMENTS = [
     },
     {
         id: 'clicks_10000',
-        name: 'Click Fanatic',
-        description: 'Click the crystal 10,000 times',
+        name: 'Tap Fanatic',
+        description: 'Tap the crystal 10,000 times',
         category: 'CLICKING',
         requirement: { totalClicks: 10000 },
         reward: { clickPowerBonus: 0.02 },
@@ -43,8 +43,8 @@ const ACHIEVEMENTS = [
     },
     {
         id: 'clicks_100000',
-        name: 'Click Master',
-        description: 'Click the crystal 100,000 times',
+        name: 'Tap Master',
+        description: 'Tap the crystal 100,000 times',
         category: 'CLICKING',
         requirement: { totalClicks: 100000 },
         reward: { clickPowerBonus: 0.03 },
@@ -52,8 +52,8 @@ const ACHIEVEMENTS = [
     },
     {
         id: 'clicks_1000000',
-        name: 'Click Ascendant',
-        description: 'Click the crystal 1,000,000 times',
+        name: 'Tap Ascendant',
+        description: 'Tap the crystal 1,000,000 times',
         category: 'CLICKING',
         requirement: { totalClicks: 1000000 },
         reward: { clickPowerBonus: 0.05 },
@@ -62,7 +62,7 @@ const ACHIEVEMENTS = [
     {
         id: 'speed_clicker_50',
         name: 'Quick Fingers',
-        description: 'Click 50 times in 10 seconds',
+        description: 'Tap 50 times in 10 seconds',
         category: 'CLICKING',
         requirement: { clicksInTimeframe: { count: 50, seconds: 10 } },
         reward: { clickPowerBonus: 0.02 },
@@ -71,7 +71,7 @@ const ACHIEVEMENTS = [
     {
         id: 'speed_clicker_100',
         name: 'Lightning Reflexes',
-        description: 'Click 100 times in 10 seconds',
+        description: 'Tap 100 times in 10 seconds',
         category: 'CLICKING',
         requirement: { clicksInTimeframe: { count: 100, seconds: 10 } },
         reward: { clickPowerBonus: 0.03 },
@@ -106,8 +106,8 @@ const ACHIEVEMENTS = [
     },
     {
         id: 'click_value_1m',
-        name: 'Powerful Click',
-        description: 'Reach 1 million ore per click',
+        name: 'Powerful Tap',
+        description: 'Reach 1 million ore per tap',
         category: 'CLICKING',
         requirement: { orePerClick: 1000000 },
         reward: { clickPowerBonus: 0.05 },
@@ -115,8 +115,8 @@ const ACHIEVEMENTS = [
     },
     {
         id: 'click_value_1b',
-        name: 'Devastating Click',
-        description: 'Reach 1 billion ore per click',
+        name: 'Devastating Tap',
+        description: 'Reach 1 billion ore per tap',
         category: 'CLICKING',
         requirement: { orePerClick: 1000000000 },
         reward: { clickPowerBonus: 0.1 },
@@ -124,8 +124,8 @@ const ACHIEVEMENTS = [
     },
     {
         id: 'click_value_1t',
-        name: 'Cosmic Click',
-        description: 'Reach 1 trillion ore per click',
+        name: 'Cosmic Tap',
+        description: 'Reach 1 trillion ore per tap',
         category: 'CLICKING',
         requirement: { orePerClick: 1000000000000 },
         reward: { clickPowerBonus: 0.15 },
@@ -134,7 +134,7 @@ const ACHIEVEMENTS = [
     {
         id: 'no_click_hour',
         name: 'True Idle',
-        description: 'Earn 1 hour of production without clicking',
+        description: 'Earn 1 hour of production without tapping',
         category: 'CLICKING',
         requirement: { idleTimeWithoutClick: 3600 },
         reward: { productionBonus: 0.05 },
@@ -142,8 +142,8 @@ const ACHIEVEMENTS = [
     },
     {
         id: 'marathon_clicker',
-        name: 'Marathon Clicker',
-        description: 'Click for 1 hour straight (3600 clicks)',
+        name: 'Marathon Tapper',
+        description: 'Tap for 1 hour straight (3600 taps)',
         category: 'CLICKING',
         requirement: { totalClicks: 3600, inSession: true },
         reward: { clickPowerBonus: 0.05 },

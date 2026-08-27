@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eldritch Excavation - A Lovecraftian Idle Mining Game</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Uncial+Antiqua&display=swap" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body>
@@ -30,6 +33,10 @@
                 <span id="mobile-ore-per-second" class="mobile-stat-value">0</span>
             </div>
             <div class="mobile-stat">
+                <span class="mobile-stat-label">Taps/s</span>
+                <span id="mobile-taps-per-second" class="mobile-stat-value">0</span>
+            </div>
+            <div class="mobile-stat">
                 <span class="mobile-stat-label">Madness</span>
                 <span id="mobile-madness-count" class="mobile-stat-value">0</span>
             </div>
@@ -48,7 +55,7 @@
                 <div class="stat-box">
                     <h3>💰 Resources</h3>
                     <p><span class="label">Ore:</span> <span id="ore-count">0</span></p>
-                    <p><span class="label">Ore/click:</span> <span id="ore-per-click">1</span></p>
+                    <p><span class="label">Ore/tap:</span> <span id="ore-per-click">1</span></p>
                     <p><span class="label">Ore/sec:</span> <span id="ore-per-second">0</span></p>
                 </div>
 
@@ -60,19 +67,20 @@
 
                 <div class="stat-box">
                     <h3>📊 Statistics</h3>
-                    <p><span class="label">Total Clicks:</span> <span id="total-clicks">0</span></p>
+                    <p><span class="label">Total Taps:</span> <span id="total-taps">0</span></p>
                     <p><span class="label">Total Ore:</span> <span id="total-ore">0</span></p>
+                    <p><span class="label">Taps/s:</span> <span id="taps-per-second">0</span> (<span id="peak-taps-per-second">0</span> peak)</p>
                 </div>
             </div>
 
-            <!-- Center Panel: Main Clicker -->
+            <!-- Center Panel: Main Tapper -->
             <div id="center-panel" class="panel">
-                <div id="clicker-area">
-                    <div id="ore-crystal" class="clickable">
+                <div id="tapper-area">
+                    <div id="ore-crystal" class="tappable">
                         <div class="crystal-glow"></div>
                         <div class="crystal-core">⬟</div>
                     </div>
-                    <p id="click-instruction">Click to excavate!</p>
+                    <p id="tap-instruction">Tap to excavate!</p>
                 </div>
 
                 <!-- Floating Damage Numbers -->

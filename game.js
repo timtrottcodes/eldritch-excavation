@@ -46,8 +46,8 @@ const gameState = {
     madnessMultiplier: 1,
     autoClicksPerSecond: 0,
 
-    // Click statistics (for CPS tracking and peak)
-    clickTimestamps: [], // timestamps (ms) of recent manual clicks
+    // Tap statistics (for TPS tracking and peak)
+    clickTimestamps: [], // timestamps (ms) of recent manual taps
     clicksPerSecond: 0,
     peakClicksPerSecond: 0,
 
@@ -188,8 +188,8 @@ function calculateOrePerSecond() {
     total *= gameState.toolEfficiencyMultiplier;
     total *= gameState.globalMultiplier;
 
-    // Add auto-clicks at a fraction of manual click power so idle progress scales nicely
-    const AUTO_CLICK_IDLE_FRACTION = 0.05; // reduced so manual clicking stays most efficient
+    // Add auto-taps at a fraction of manual tap power so idle progress scales nicely
+    const AUTO_CLICK_IDLE_FRACTION = 0.05; // reduced so manual tapping stays most efficient
     total += gameState.autoClicksPerSecond * gameState.orePerClick * AUTO_CLICK_IDLE_FRACTION;
 
     // Cap idle production so it never exceeds a high fraction of the player's peak manual clicking capability.
@@ -231,7 +231,7 @@ function checkOreUnlocks() {
     }
 }
 
-// Click handler with critical hits
+// Tap handler with critical hits
 function handleClick() {
     let oreGained = gameState.orePerClick;
     let isCrit = false;
@@ -254,7 +254,7 @@ function handleClick() {
     addOre(oreGained);
     gameState.totalClicks++;
 
-    // Record this click timestamp (ms) for clicks-per-second tracking
+    // Record this tap timestamp (ms) for taps-per-second tracking
     const __clickNow = Date.now();
     gameState.clickTimestamps.push(__clickNow);
 
@@ -313,13 +313,13 @@ function showCriticalHitEffect() {
     }
 }
 
-// Create click visual effect
+// Create tap visual effect
 function createClickEffect() {
     $('#ore-crystal').addClass('clicked');
     setTimeout(() => $('#ore-crystal').removeClass('clicked'), 100);
 }
 
-// Create click particles based on ore tier
+// Create tap particles based on ore tier
 function createClickParticles() {
     // Check if particles are enabled
     if (!gameState.particles) return;
@@ -928,24 +928,27 @@ function showNotification(message) {
 // Game loop (runs every 100ms)
 function gameLoop() {
     const now = Date.now();
-    const deltaTime = (now - gameState.lastTick) / 1000; // Convert to seconds
-    gameState.lastTick = now;
 
-    // Add passive ore production only when the game is active and visible.
-    if (isGameActive() && gameState.orePerSecond > 0) {
-        addOre(gameState.orePerSecond * deltaTime);
+    if (!isGameActive()) {
+        // While the game is inactive, do not progress idle production.
+        // Ensure the timer does not grant catch-up rewards when the tab becomes active again.
+        gameState.lastTick = now;
+    } else {
+        const deltaTime = (now - gameState.lastTick) / 1000; // Convert to seconds
+        gameState.lastTick = now;
+
+        if (gameState.orePerSecond > 0) {
+            addOre(gameState.orePerSecond * deltaTime);
+        }
+
+        // Check expedition completion only while active
+        checkExpeditionCompletion();
     }
 
     // Check for autosave
     if (gameState.autoSave && now - gameState.lastSave > 30000) { // Every 30 seconds
         saveGame();
         gameState.lastSave = now;
-    }
-
-    // Only progress idle systems while the game is active and visible.
-    if (isGameActive()) {
-        // Check expedition completion
-        checkExpeditionCompletion();
     }
 
     updateClickStats();
@@ -1002,24 +1005,14 @@ function updateUI() {
     $('#ore-per-second').text(formatNumber(gameState.orePerSecond));
     $('#madness-count').text(formatNumber(gameState.madness));
     $('#prestige-count').text(gameState.prestiges);
-    $('#total-clicks').text(formatNumber(gameState.totalClicks));
+    $('#total-taps').text(formatNumber(gameState.totalClicks));
     $('#total-ore').text(formatNumber(gameState.totalOre));
 
-    // Ensure clicks-per-second display exists (insert next to ore-per-second if missing)
-    if ($('#clicks-per-second').length === 0) {
-        try {
-            $('#ore-per-second').after($('<div class="stat-row clicks-row">').html(`Clicks/s: <span id="clicks-per-second">0</span> (<span id="peak-clicks-per-second">0</span> peak)`));
-        } catch (e) {}
-    }
-    $('#clicks-per-second').text(formatNumber(gameState.clicksPerSecond));
-    $('#peak-clicks-per-second').text(formatNumber(gameState.peakClicksPerSecond));
+    $('#taps-per-second').text(formatNumber(gameState.clicksPerSecond));
+    $('#peak-taps-per-second').text(formatNumber(gameState.peakClicksPerSecond));
 
-    // Mobile stats: show CPS under mobile ore/sec if mobile UI exists
-    if ($('#mobile-ore-per-second').length && $('#mobile-clicks-per-second').length === 0) {
-        $('#mobile-ore-per-second').after($('<div id="mobile-clicks-per-second-row">').html(`Clicks/s: <span id="mobile-clicks-per-second">0</span>`));
-    }
-    if ($('#mobile-clicks-per-second').length) {
-        $('#mobile-clicks-per-second').text(formatNumber(gameState.clicksPerSecond));
+    if ($('#mobile-taps-per-second').length) {
+        $('#mobile-taps-per-second').text(formatNumber(gameState.clicksPerSecond));
     }
 
     // Update mobile stats bar
@@ -1322,7 +1315,7 @@ function renderTools() {
             buyBtn.prop('disabled', gameState.ore < cost);
             buyBtn.on('click', () => buyTool(tool.id, 1));
 
-            const buy10Btn = $('<button class="buy-btn">').text('Level +10').css('margin-top', '5px');
+            const buy10Btn = $('<button class="buy-btn">').text('Level +10');
             let cost10 = 0;
             const maxLevels = Math.min(10, MAX_TOOL_LEVEL - level);
             for (let i = 0; i < maxLevels; i++) {
@@ -1331,10 +1324,14 @@ function renderTools() {
             buy10Btn.prop('disabled', gameState.ore < cost10 || maxLevels === 0);
             buy10Btn.on('click', () => buyTool(tool.id, 10));
 
+            // Put level buttons side-by-side in a row to save vertical space
+            const btnRow = $('<div class="level-btns">');
+            btnRow.append(buyBtn, buy10Btn);
+
             // Progress bar to next rarity
             const progressBar = createRarityProgressBar(level);
 
-            card.append(header, description, stats, progressBar, buyBtn, buy10Btn);
+            card.append(header, description, stats, progressBar, btnRow);
         } else {
             // Maxed
             card.append(header, description);
@@ -1771,7 +1768,7 @@ function setupMobileDrawer() {
     // Initially closed
     drawer.addClass('drawer-closed');
 
-    // Handle tap/click
+    // Handle tap
     $('#drawer-handle').on('click', function(e) {
         if (!isDragging) {
             drawer.toggleClass('drawer-open drawer-closed');
@@ -1812,7 +1809,7 @@ function setupMobileDrawer() {
 
 // Set up event listeners
 function setupEventListeners() {
-    // Main click
+    // Main tap
     $('#ore-crystal').on('click', handleClick);
 
     // Desktop tab navigation
@@ -1912,9 +1909,17 @@ function setupEventListeners() {
     const updateGameActiveState = () => {
         const visible = !document.hidden;
         const focused = document.hasFocus();
+        const wasActive = gameState.isGameActive;
+        const isActive = visible && focused;
+
         gameState.isPageVisible = visible;
         gameState.isWindowFocused = focused;
-        gameState.isGameActive = visible && focused;
+        gameState.isGameActive = isActive;
+
+        if (isActive && !wasActive) {
+            // Reset the tick timer when the game becomes active again to avoid offline gain.
+            gameState.lastTick = Date.now();
+        }
     };
 
     document.addEventListener('visibilitychange', updateGameActiveState);
@@ -1924,7 +1929,7 @@ function setupEventListeners() {
 
     // Keyboard shortcuts
     $(document).on('keydown', function(e) {
-        // Space to click
+        // Space to tap
         if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
             e.preventDefault();
             handleClick();

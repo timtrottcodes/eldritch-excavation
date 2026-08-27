@@ -4,22 +4,22 @@
 // Rarity tier definitions
 const RARITY_TIERS = {
     COMMON: { name: 'Common', level: 0, color: '#FFFFFF', requiredLevel: 0 },
-    UNCOMMON: { name: 'Uncommon', level: 1, color: '#1EFF00', requiredLevel: 25 },
-    RARE: { name: 'Rare', level: 2, color: '#0070DD', requiredLevel: 50 },
-    EPIC: { name: 'Epic', level: 3, color: '#A335EE', requiredLevel: 100 },
+    UNCOMMON: { name: 'Uncommon', level: 1, color: '#1EFF00', requiredLevel: 15 },
+    RARE: { name: 'Rare', level: 2, color: '#0070DD', requiredLevel: 35 },
+    EPIC: { name: 'Epic', level: 3, color: '#A335EE', requiredLevel: 65 },
     LEGENDARY: { name: 'Legendary', level: 4, color: '#FF8000', requiredLevel: 150 },
-    MYTHICAL: { name: 'Mythical', level: 5, color: '#E6CC80', requiredLevel: 200 }
+    MYTHICAL: { name: 'Mythical', level: 5, color: '#E6CC80', requiredLevel: 160 }
 };
 
 const MAX_TOOL_LEVEL = 256;
 
 // Helper to get rarity based on level
 function getRarityForLevel(level) {
-    if (level >= 200) return RARITY_TIERS.MYTHICAL;
-    if (level >= 150) return RARITY_TIERS.LEGENDARY;
-    if (level >= 100) return RARITY_TIERS.EPIC;
-    if (level >= 50) return RARITY_TIERS.RARE;
-    if (level >= 25) return RARITY_TIERS.UNCOMMON;
+    if (level >= RARITY_TIERS.MYTHICAL.requiredLevel) return RARITY_TIERS.MYTHICAL;
+    if (level >= RARITY_TIERS.LEGENDARY.requiredLevel) return RARITY_TIERS.LEGENDARY;
+    if (level >= RARITY_TIERS.EPIC.requiredLevel) return RARITY_TIERS.EPIC;
+    if (level >= RARITY_TIERS.RARE.requiredLevel) return RARITY_TIERS.RARE;
+    if (level >= RARITY_TIERS.UNCOMMON.requiredLevel) return RARITY_TIERS.UNCOMMON;
     return RARITY_TIERS.COMMON;
 }
 
@@ -80,8 +80,8 @@ const GAME_DATA = {
             name: 'Cultist Miner',
             description: 'A devoted follower who tirelessly digs',
             baseCost: 50,
-            baseProduction: 0.05,
-            costMultiplier: 1.15,
+            baseProduction: 0.06,
+            costMultiplier: 1.05,
             icon: '🧙'
         },
         {
@@ -89,8 +89,8 @@ const GAME_DATA = {
             name: 'Ghoul Scavenger',
             description: 'Grave-dwelling creatures with a nose for ore',
             baseCost: 500,
-            baseProduction: 0.2,
-            costMultiplier: 1.15,
+            baseProduction: 0.1,
+            costMultiplier: 1.06,
             icon: '🧟'
         },
         {
@@ -99,7 +99,7 @@ const GAME_DATA = {
             description: 'An amorphous entity of terrible efficiency',
             baseCost: 5000,
             baseProduction: 1,
-            costMultiplier: 1.15,
+            costMultiplier: 1.07,
             icon: '👾'
         },
         {
@@ -107,8 +107,8 @@ const GAME_DATA = {
             name: 'Deep One Excavator',
             description: 'Aquatic horrors from beneath the waves',
             baseCost: 50000,
-            baseProduction: 5,
-            costMultiplier: 1.15,
+            baseProduction: 2.5,
+            costMultiplier: 1.08,
             icon: '🐙'
         },
         {
@@ -116,8 +116,8 @@ const GAME_DATA = {
             name: 'Mi-Go Harvester',
             description: 'Fungoid beings from dark Yuggoth',
             baseCost: 500000,
-            baseProduction: 25,
-            costMultiplier: 1.15,
+            baseProduction: 10,
+            costMultiplier: 1.09,
             icon: '🦠'
         },
         {
@@ -126,7 +126,7 @@ const GAME_DATA = {
             description: 'Faceless flyers that work in darkness',
             baseCost: 5000000,
             baseProduction: 125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.10,
             icon: '🦇'
         },
         {
@@ -135,7 +135,7 @@ const GAME_DATA = {
             description: 'Creatures that hunt through angles of time',
             baseCost: 50000000,
             baseProduction: 625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.11,
             icon: '🐺'
         },
         {
@@ -144,7 +144,7 @@ const GAME_DATA = {
             description: 'Partially material beings of great power',
             baseCost: 500000000,
             baseProduction: 3125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.12,
             icon: '🫧'
         },
         {
@@ -153,7 +153,7 @@ const GAME_DATA = {
             description: 'Interstellar creatures enslaved to your will',
             baseCost: 5000000000,
             baseProduction: 15625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.13,
             icon: '🌙'
         },
         {
@@ -162,7 +162,7 @@ const GAME_DATA = {
             description: 'Scaled nightmares from the peaks of Leng',
             baseCost: 50000000000,
             baseProduction: 78125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.14,
             icon: '🦅'
         },
         {
@@ -180,7 +180,7 @@ const GAME_DATA = {
             description: 'Ancient beings of cosmic power',
             baseCost: 5000000000000,
             baseProduction: 1953125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.16,
             icon: '⭐'
         },
         {
@@ -189,7 +189,7 @@ const GAME_DATA = {
             description: 'Mindless servants of the court of chaos',
             baseCost: 50000000000000,
             baseProduction: 9765625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.17,
             icon: '👻'
         },
         {
@@ -198,7 +198,7 @@ const GAME_DATA = {
             description: 'An indescribable chromatic entity',
             baseCost: 500000000000000,
             baseProduction: 48828125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.18,
             icon: '🌈'
         },
         {
@@ -207,7 +207,7 @@ const GAME_DATA = {
             description: 'Steps between worlds to gather riches',
             baseCost: 5000000000000000,
             baseProduction: 244140625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.19,
             icon: '🚪'
         },
         {
@@ -216,7 +216,7 @@ const GAME_DATA = {
             description: 'Ancient Antarctic builders and scientists',
             baseCost: 50000000000000000,
             baseProduction: 1220703125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.20,
             icon: '❄️'
         },
         {
@@ -225,7 +225,7 @@ const GAME_DATA = {
             description: 'Toad-like slavers from Earth\'s moon',
             baseCost: 500000000000000000,
             baseProduction: 6103515625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.21,
             icon: '🌕'
         },
         {
@@ -234,7 +234,7 @@ const GAME_DATA = {
             description: 'The crawling chaos takes many forms',
             baseCost: 5000000000000000000,
             baseProduction: 30517578125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.22,
             icon: '🎭'
         },
         {
@@ -243,7 +243,7 @@ const GAME_DATA = {
             description: 'High priests of the ocean depths',
             baseCost: 50000000000000000000,
             baseProduction: 152587890625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.23,
             icon: '🔱'
         },
         {
@@ -252,7 +252,7 @@ const GAME_DATA = {
             description: 'The Yellow Sign empowers your workers',
             baseCost: 500000000000000000000,
             baseProduction: 762939453125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.24,
             icon: '👑'
         },
         {
@@ -261,7 +261,7 @@ const GAME_DATA = {
             description: 'Spawn of the Black Goat with a Thousand Young',
             baseCost: 5000000000000000000000,
             baseProduction: 3814697265625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.25,
             icon: '🌳'
         },
         {
@@ -270,7 +270,7 @@ const GAME_DATA = {
             description: 'The key and the gate, the past and future',
             baseCost: 50000000000000000000000,
             baseProduction: 19073486328125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.26,
             icon: '🌌'
         },
         {
@@ -279,7 +279,7 @@ const GAME_DATA = {
             description: 'The blind idiot god dreams your fortune',
             baseCost: 500000000000000000000000,
             baseProduction: 95367431640625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.27,
             icon: '💤'
         },
         {
@@ -288,7 +288,7 @@ const GAME_DATA = {
             description: 'Ph\'nglui mglw\'nafh Cthulhu R\'lyeh wgah\'nagl fhtagn',
             baseCost: 5000000000000000000000000,
             baseProduction: 476837158203125,
-            costMultiplier: 1.15,
+            costMultiplier: 1.28,
             icon: '🐉'
         },
         {
@@ -297,29 +297,29 @@ const GAME_DATA = {
             description: 'The ultimate cosmic entities work for you',
             baseCost: 50000000000000000000000000,
             baseProduction: 2384185791015625,
-            costMultiplier: 1.15,
+            costMultiplier: 1.29,
             icon: '♾️'
         },
     ],
 
     // Upgrades (60+ upgrades across multiple categories)
     upgrades: [
-        // Click Power Upgrades (15 tiers)
-        { id: 'click1', name: 'Reinforced Pick', description: '1.3x click power', cost: 100, effect: { clickPower: 1.3 }, requirement: null },
-        { id: 'click2', name: 'Iron Mattock', description: '1.3x click power', cost: 500, effect: { clickPower: 1.3 }, requirement: 'click1' },
-        { id: 'click3', name: 'Bronze Excavator', description: '1.3x click power', cost: 2500, effect: { clickPower: 1.3 }, requirement: 'click2' },
-        { id: 'click4', name: 'Cursed Hammer', description: '1.3x click power', cost: 12000, effect: { clickPower: 1.3 }, requirement: 'click3' },
-        { id: 'click5', name: 'Silver Drill', description: '1.3x click power', cost: 60000, effect: { clickPower: 1.3 }, requirement: 'click4' },
-        { id: 'click6', name: 'Eldritch Bore', description: '1.3x click power', cost: 300000, effect: { clickPower: 1.3 }, requirement: 'click5' },
-        { id: 'click7', name: 'Platinum Breaker', description: '1.3x click power', cost: 1500000, effect: { clickPower: 1.3 }, requirement: 'click6' },
-        { id: 'click8', name: 'Gem Splitter', description: '1.3x click power', cost: 7500000, effect: { clickPower: 1.3 }, requirement: 'click7' },
-        { id: 'click9', name: 'Diamond Edge', description: '1.3x click power', cost: 38000000, effect: { clickPower: 1.3 }, requirement: 'click8' },
-        { id: 'click10', name: 'Void Excavator', description: '1.3x click power', cost: 190000000, effect: { clickPower: 1.3 }, requirement: 'click9' },
-        { id: 'click11', name: 'Star Forge Hammer', description: '1.3x click power', cost: 950000000, effect: { clickPower: 1.3 }, requirement: 'click10' },
-        { id: 'click12', name: 'Reality Splitter', description: '1.3x click power', cost: 4750000000, effect: { clickPower: 1.3 }, requirement: 'click11' },
-        { id: 'click13', name: 'Time Shatterer', description: '1.3x click power', cost: 24000000000, effect: { clickPower: 1.3 }, requirement: 'click12' },
-        { id: 'click14', name: 'Dimension Breaker', description: '1.3x click power', cost: 120000000000, effect: { clickPower: 1.3 }, requirement: 'click13' },
-        { id: 'click15', name: 'Cosmic Annihilator', description: '1.5x click power', cost: 600000000000, effect: { clickPower: 1.5 }, requirement: 'click14' },
+        // Tap Power Upgrades (15 tiers)
+        { id: 'click1', name: 'Reinforced Pick', description: '1.3x tap power', cost: 100, effect: { clickPower: 1.3 }, requirement: null },
+        { id: 'click2', name: 'Iron Mattock', description: '1.3x tap power', cost: 500, effect: { clickPower: 1.3 }, requirement: 'click1' },
+        { id: 'click3', name: 'Bronze Excavator', description: '1.3x tap power', cost: 2500, effect: { clickPower: 1.3 }, requirement: 'click2' },
+        { id: 'click4', name: 'Cursed Hammer', description: '1.3x tap power', cost: 12000, effect: { clickPower: 1.3 }, requirement: 'click3' },
+        { id: 'click5', name: 'Silver Drill', description: '1.3x tap power', cost: 60000, effect: { clickPower: 1.3 }, requirement: 'click4' },
+        { id: 'click6', name: 'Eldritch Bore', description: '1.3x tap power', cost: 300000, effect: { clickPower: 1.3 }, requirement: 'click5' },
+        { id: 'click7', name: 'Platinum Breaker', description: '1.3x tap power', cost: 1500000, effect: { clickPower: 1.3 }, requirement: 'click6' },
+        { id: 'click8', name: 'Gem Splitter', description: '1.3x tap power', cost: 7500000, effect: { clickPower: 1.3 }, requirement: 'click7' },
+        { id: 'click9', name: 'Diamond Edge', description: '1.3x tap power', cost: 38000000, effect: { clickPower: 1.3 }, requirement: 'click8' },
+        { id: 'click10', name: 'Void Excavator', description: '1.3x tap power', cost: 190000000, effect: { clickPower: 1.3 }, requirement: 'click9' },
+        { id: 'click11', name: 'Star Forge Hammer', description: '1.3x tap power', cost: 950000000, effect: { clickPower: 1.3 }, requirement: 'click10' },
+        { id: 'click12', name: 'Reality Splitter', description: '1.3x tap power', cost: 4750000000, effect: { clickPower: 1.3 }, requirement: 'click11' },
+        { id: 'click13', name: 'Time Shatterer', description: '1.3x tap power', cost: 24000000000, effect: { clickPower: 1.3 }, requirement: 'click12' },
+        { id: 'click14', name: 'Dimension Breaker', description: '1.3x tap power', cost: 120000000000, effect: { clickPower: 1.3 }, requirement: 'click13' },
+        { id: 'click15', name: 'Cosmic Annihilator', description: '1.5x tap power', cost: 600000000000, effect: { clickPower: 1.5 }, requirement: 'click14' },
 
         // Production Multipliers (15 tiers)
         { id: 'prod1', name: 'Whispered Secrets', description: '+10% production', cost: 1000, effect: { productionMult: 1.10 }, requirement: null },
@@ -338,17 +338,17 @@ const GAME_DATA = {
         { id: 'prod14', name: 'Revelations of Glaaki', description: '+70% production', cost: 1175000000000, effect: { productionMult: 1.70 }, requirement: 'prod13' },
         { id: 'prod15', name: 'True Necronomicon', description: '+70% production', cost: 5875000000000, effect: { productionMult: 1.70 }, requirement: 'prod14' },
 
-        // Auto-Clicker Upgrades (10 tiers)
-        { id: 'auto1', name: 'Auto-Clicker I', description: '+1 auto-click/s', cost: 5000, effect: { autoClick: 1 }, requirement: null },
-        { id: 'auto2', name: 'Auto-Clicker II', description: '+2 auto-clicks/s', cost: 50000, effect: { autoClick: 2 }, requirement: 'auto1' },
-        { id: 'auto3', name: 'Auto-Clicker III', description: '+3 auto-clicks/s', cost: 500000, effect: { autoClick: 3 }, requirement: 'auto2' },
-        { id: 'auto4', name: 'Auto-Clicker IV', description: '+4 auto-clicks/s', cost: 5000000, effect: { autoClick: 4 }, requirement: 'auto3' },
-        { id: 'auto5', name: 'Auto-Clicker V', description: '+5 auto-clicks/s', cost: 50000000, effect: { autoClick: 5 }, requirement: 'auto4' },
-        { id: 'auto6', name: 'Auto-Clicker VI', description: '+7 auto-clicks/s', cost: 500000000, effect: { autoClick: 7 }, requirement: 'auto5' },
-        { id: 'auto7', name: 'Auto-Clicker VII', description: '+10 auto-clicks/s', cost: 5000000000, effect: { autoClick: 10 }, requirement: 'auto6' },
-        { id: 'auto8', name: 'Auto-Clicker VIII', description: '+14 auto-clicks/s', cost: 50000000000, effect: { autoClick: 14 }, requirement: 'auto7' },
-        { id: 'auto9', name: 'Auto-Clicker IX', description: '+20 auto-clicks/s', cost: 500000000000, effect: { autoClick: 20 }, requirement: 'auto8' },
-        { id: 'auto10', name: 'Auto-Clicker X', description: '+28 auto-clicks/s', cost: 5000000000000, effect: { autoClick: 28 }, requirement: 'auto9' },
+        // Auto-Tapper Upgrades (10 tiers)
+        { id: 'auto1', name: 'Auto-Tapper I', description: '+1 auto-tap/s', cost: 5000, effect: { autoClick: 1 }, requirement: null },
+        { id: 'auto2', name: 'Auto-Tapper II', description: '+2 auto-taps/s', cost: 50000, effect: { autoClick: 2 }, requirement: 'auto1' },
+        { id: 'auto3', name: 'Auto-Tapper III', description: '+3 auto-taps/s', cost: 500000, effect: { autoClick: 3 }, requirement: 'auto2' },
+        { id: 'auto4', name: 'Auto-Tapper IV', description: '+4 auto-taps/s', cost: 5000000, effect: { autoClick: 4 }, requirement: 'auto3' },
+        { id: 'auto5', name: 'Auto-Tapper V', description: '+5 auto-taps/s', cost: 50000000, effect: { autoClick: 5 }, requirement: 'auto4' },
+        { id: 'auto6', name: 'Auto-Tapper VI', description: '+7 auto-taps/s', cost: 500000000, effect: { autoClick: 7 }, requirement: 'auto5' },
+        { id: 'auto7', name: 'Auto-Tapper VII', description: '+10 auto-taps/s', cost: 5000000000, effect: { autoClick: 10 }, requirement: 'auto6' },
+        { id: 'auto8', name: 'Auto-Tapper VIII', description: '+14 auto-taps/s', cost: 50000000000, effect: { autoClick: 14 }, requirement: 'auto7' },
+        { id: 'auto9', name: 'Auto-Tapper IX', description: '+20 auto-taps/s', cost: 500000000000, effect: { autoClick: 20 }, requirement: 'auto8' },
+        { id: 'auto10', name: 'Auto-Tapper X', description: '+28 auto-taps/s', cost: 5000000000000, effect: { autoClick: 28 }, requirement: 'auto9' },
 
         // Tool Efficiency Upgrades (10 tiers)
         { id: 'tool_eff1', name: 'Better Training', description: 'All tools 1.3x more efficient', cost: 10000, effect: { toolEfficiency: 1.3 }, requirement: null },
@@ -378,27 +378,27 @@ const GAME_DATA = {
     // Relics - powerful permanent bonuses (25 relics, persist through prestige!)
     relics: [
         { id: 'relic1', name: 'Rusty Pendant', description: '1.5x ore from all sources', effect: { globalMult: 1.5 }, cost: 25000 },
-        { id: 'relic2', name: 'Carved Idol', description: '2x click power', effect: { clickMult: 2 }, cost: 100000 },
+        { id: 'relic2', name: 'Carved Idol', description: '2x tap power', effect: { clickMult: 2 }, cost: 100000 },
         { id: 'relic3', name: 'Ancient Coin', description: '1.5x tool production', effect: { toolMult: 1.5 }, cost: 250000 },
         { id: 'relic4', name: 'Obsidian Mirror', description: '1.25x madness gain', effect: { madnessMult: 1.25 }, cost: 500000 },
         { id: 'relic5', name: 'Amulet of R\'lyeh', description: '1.5x ore from all sources', effect: { globalMult: 1.5 }, cost: 1000000 },
-        { id: 'relic6', name: 'Crown of Kadath', description: '1.75x click power', effect: { clickMult: 1.75 }, cost: 2500000 },
+        { id: 'relic6', name: 'Crown of Kadath', description: '1.75x tap power', effect: { clickMult: 1.75 }, cost: 2500000 },
         { id: 'relic7', name: 'Staff of Yog-Sothoth', description: '1.4x tool production', effect: { toolMult: 1.4 }, cost: 5000000 },
         { id: 'relic8', name: 'Mask of Nyarlathotep', description: '1.5x madness gain', effect: { madnessMult: 1.5 }, cost: 10000000 },
         { id: 'relic9', name: 'Ring of Eibon', description: '1.75x ore from all sources', effect: { globalMult: 1.75 }, cost: 25000000 },
-        { id: 'relic10', name: 'Blade of Cthugha', description: '2.5x click power', effect: { clickMult: 2.5 }, cost: 50000000 },
+        { id: 'relic10', name: 'Blade of Cthugha', description: '2.5x tap power', effect: { clickMult: 2.5 }, cost: 50000000 },
         { id: 'relic11', name: 'Tome of Eternal Night', description: '1.75x tool production', effect: { toolMult: 1.75 }, cost: 100000000 },
         { id: 'relic12', name: 'Orb of the Deep Ones', description: '2x madness gain', effect: { madnessMult: 2 }, cost: 250000000 },
         { id: 'relic13', name: 'Eye of Shub-Niggurath', description: '2x all production', effect: { globalMult: 2 }, cost: 500000000 },
-        { id: 'relic14', name: 'Flute of Azathoth', description: '3.5x click power', effect: { clickMult: 3.5 }, cost: 1000000000 },
+        { id: 'relic14', name: 'Flute of Azathoth', description: '3.5x tap power', effect: { clickMult: 3.5 }, cost: 1000000000 },
         { id: 'relic15', name: 'Sigil of the Gate', description: '2.5x tool production', effect: { toolMult: 2.5 }, cost: 2500000000 },
         { id: 'relic16', name: 'Fragment of the Shining Trapezohedron', description: '2.5x madness gain', effect: { madnessMult: 2.5 }, cost: 5000000000 },
         { id: 'relic17', name: 'Heart of Azathoth', description: '2.5x ore gain', effect: { globalMult: 2.5 }, cost: 10000000000 },
-        { id: 'relic18', name: 'Claw of Cthulhu', description: '7x click power', effect: { clickMult: 7 }, cost: 25000000000 },
+        { id: 'relic18', name: 'Claw of Cthulhu', description: '7x tap power', effect: { clickMult: 7 }, cost: 25000000000 },
         { id: 'relic19', name: 'Seed of Shub-Niggurath', description: '4x tool production', effect: { toolMult: 4 }, cost: 50000000000 },
         { id: 'relic20', name: 'Yellow Sign of Hastur', description: '3x madness gain', effect: { madnessMult: 3 }, cost: 100000000000 },
         { id: 'relic21', name: 'Key of the Silver Gate', description: '4x ore gain', effect: { globalMult: 4 }, cost: 250000000000 },
-        { id: 'relic22', name: 'Sphere of the Outer Gods', description: '12x click power', effect: { clickMult: 12 }, cost: 500000000000 },
+        { id: 'relic22', name: 'Sphere of the Outer Gods', description: '12x tap power', effect: { clickMult: 12 }, cost: 500000000000 },
         { id: 'relic23', name: 'Crown of Dagon', description: '8x tool production', effect: { toolMult: 8 }, cost: 1000000000000 },
         { id: 'relic24', name: 'Soul of Yog-Sothoth', description: '5x madness gain', effect: { madnessMult: 5 }, cost: 2500000000000 },
         { id: 'relic25', name: 'Core of Creation', description: '10x all ore gain', effect: { globalMult: 10 }, cost: 10000000000000 },
@@ -427,12 +427,12 @@ const GAME_DATA = {
         { id: 'tool4', name: 'Cosmic Workers IV', description: 'Tools 1.5x more effective', cost: 75, effect: { toolEfficiency: 1.5 }, requirement: 'tool3' },
         { id: 'tool5', name: 'Cosmic Workers V', description: 'Tools 2x more effective', cost: 250, effect: { toolEfficiency: 2 }, requirement: 'tool4' },
 
-        // Eternal Strength (click power)
-        { id: 'click_prestige1', name: 'Eternal Strength I', description: 'Clicks 1.5x more powerful', cost: 2, effect: { clickMultPrestige: 1.5 } },
-        { id: 'click_prestige2', name: 'Eternal Strength II', description: 'Clicks 1.5x more powerful', cost: 7, effect: { clickMultPrestige: 1.5 }, requirement: 'click_prestige1' },
-        { id: 'click_prestige3', name: 'Eternal Strength III', description: 'Clicks 1.5x more powerful', cost: 20, effect: { clickMultPrestige: 1.5 }, requirement: 'click_prestige2' },
-        { id: 'click_prestige4', name: 'Eternal Strength IV', description: 'Clicks 1.5x more powerful', cost: 60, effect: { clickMultPrestige: 1.5 }, requirement: 'click_prestige3' },
-        { id: 'click_prestige5', name: 'Eternal Strength V', description: 'Clicks 2x more powerful', cost: 200, effect: { clickMultPrestige: 2 }, requirement: 'click_prestige4' },
+        // Eternal Strength (tap power)
+        { id: 'click_prestige1', name: 'Eternal Strength I', description: 'Taps 1.5x more powerful', cost: 2, effect: { clickMultPrestige: 1.5 } },
+        { id: 'click_prestige2', name: 'Eternal Strength II', description: 'Taps 1.5x more powerful', cost: 7, effect: { clickMultPrestige: 1.5 }, requirement: 'click_prestige1' },
+        { id: 'click_prestige3', name: 'Eternal Strength III', description: 'Taps 1.5x more powerful', cost: 20, effect: { clickMultPrestige: 1.5 }, requirement: 'click_prestige2' },
+        { id: 'click_prestige4', name: 'Eternal Strength IV', description: 'Taps 1.5x more powerful', cost: 60, effect: { clickMultPrestige: 1.5 }, requirement: 'click_prestige3' },
+        { id: 'click_prestige5', name: 'Eternal Strength V', description: 'Taps 2x more powerful', cost: 200, effect: { clickMultPrestige: 2 }, requirement: 'click_prestige4' },
 
         // Global Multipliers
         { id: 'global_p1', name: 'Void Infusion I', description: '1.5x all ore gain', cost: 5, effect: { globalMultPrestige: 1.5 } },
@@ -458,19 +458,19 @@ const GAME_DATA = {
         // Ultimate Upgrades
         { id: 'ultimate1', name: 'Cosmic Transcendence', description: '5x all ore gain', cost: 1000, effect: { globalMultPrestige: 5 } },
         { id: 'ultimate2', name: 'Reality Mastery', description: '5x tool efficiency', cost: 2000, effect: { toolEfficiency: 5 }, requirement: 'ultimate1' },
-        { id: 'ultimate3', name: 'Dimensional Supremacy', description: '5x click power', cost: 3000, effect: { clickMultPrestige: 5 }, requirement: 'ultimate2' },
+        { id: 'ultimate3', name: 'Dimensional Supremacy', description: '5x tap power', cost: 3000, effect: { clickMultPrestige: 5 }, requirement: 'ultimate2' },
         { id: 'ultimate4', name: 'Elder God Ascension', description: '20x all ore gain', cost: 5000, effect: { globalMultPrestige: 20 }, requirement: 'ultimate3' },
     ],
 
     // Missions/Achievements with rewards (50 missions)
     missions: [
-        // Click Milestones
-        { id: 'm1', name: 'First Strike', description: 'Click 10 times', requirement: { clicks: 10 }, reward: { ore: 25 }, repeatable: false },
-        { id: 'm2', name: 'Hundred Blows', description: 'Click 100 times', requirement: { clicks: 100 }, reward: { ore: 250 }, repeatable: false },
-        { id: 'm3', name: 'Thousand Strikes', description: 'Click 1,000 times', requirement: { clicks: 1000 }, reward: { ore: 2500 }, repeatable: false },
-        { id: 'm4', name: 'Ten Thousand Hits', description: 'Click 10,000 times', requirement: { clicks: 10000 }, reward: { ore: 50000 }, repeatable: false },
-        { id: 'm5', name: 'Hundred Thousand Blows', description: 'Click 100,000 times', requirement: { clicks: 100000 }, reward: { ore: 1000000 }, repeatable: false },
-        { id: 'm6', name: 'Million Clicks', description: 'Click 1,000,000 times', requirement: { clicks: 1000000 }, reward: { ore: 25000000 }, repeatable: false },
+        // Tap Milestones
+        { id: 'm1', name: 'First Strike', description: 'Tap 10 times', requirement: { clicks: 10 }, reward: { ore: 25 }, repeatable: false },
+        { id: 'm2', name: 'Hundred Blows', description: 'Tap 100 times', requirement: { clicks: 100 }, reward: { ore: 250 }, repeatable: false },
+        { id: 'm3', name: 'Thousand Strikes', description: 'Tap 1,000 times', requirement: { clicks: 1000 }, reward: { ore: 2500 }, repeatable: false },
+        { id: 'm4', name: 'Ten Thousand Hits', description: 'Tap 10,000 times', requirement: { clicks: 10000 }, reward: { ore: 50000 }, repeatable: false },
+        { id: 'm5', name: 'Hundred Thousand Blows', description: 'Tap 100,000 times', requirement: { clicks: 100000 }, reward: { ore: 1000000 }, repeatable: false },
+        { id: 'm6', name: 'Million Taps', description: 'Tap 1,000,000 times', requirement: { clicks: 1000000 }, reward: { ore: 25000000 }, repeatable: false },
 
         // Ore Collection Milestones
         { id: 'm7', name: 'First Harvest', description: 'Collect 500 ore', requirement: { totalOre: 500 }, reward: { ore: 100 }, repeatable: false },
@@ -591,7 +591,7 @@ const GameDataHelper = {
         const toolIndex = GAME_DATA.tools.findIndex(t => t.id === toolId);
         if (toolIndex === 0) return true; // First tool always unlocked
 
-        // Check if previous tool is at Epic level (100+)
+        // Check if previous tool has reached the Epic threshold defined in RARITY_TIERS
         const previousTool = GAME_DATA.tools[toolIndex - 1];
         if (!previousTool) return true;
 

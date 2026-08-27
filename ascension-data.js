@@ -19,7 +19,7 @@ const ASCENSION_DATA = {
         {
             id: 'cosmic_click_1',
             name: 'Cosmic Strength I',
-            description: 'Clicks are 2x more powerful',
+            description: 'Taps are 2x more powerful',
             cost: 1,
             effect: { clickPowerMult: 2 },
             icon: '👆',
@@ -57,7 +57,7 @@ const ASCENSION_DATA = {
         {
             id: 'cosmic_click_2',
             name: 'Cosmic Strength II',
-            description: 'Clicks are 5x more powerful',
+            description: 'Taps are 5x more powerful',
             cost: 3,
             effect: { clickPowerMult: 5 },
             requirement: 'cosmic_click_1',
@@ -106,7 +106,7 @@ const ASCENSION_DATA = {
         {
             id: 'cosmic_auto',
             name: 'Cosmic Automation',
-            description: 'Start each prestige with 1 auto-clicker',
+            description: 'Start each prestige with 1 auto-tapper',
             cost: 3,
             effect: { startingAutoClick: 1 },
             icon: '🤖',
@@ -117,7 +117,7 @@ const ASCENSION_DATA = {
         {
             id: 'cosmic_click_3',
             name: 'Cosmic Strength III',
-            description: 'Clicks are 10x more powerful',
+            description: 'Taps are 10x more powerful',
             cost: 10,
             effect: { clickPowerMult: 10 },
             requirement: 'cosmic_click_2',
@@ -167,7 +167,7 @@ const ASCENSION_DATA = {
         {
             id: 'cosmic_ultimate_click',
             name: 'Omnipotent Touch',
-            description: 'Clicks are 100x more powerful',
+            description: 'Taps are 100x more powerful',
             cost: 25,
             effect: { clickPowerMult: 100 },
             requirement: 'cosmic_click_3',
