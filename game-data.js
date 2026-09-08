@@ -4,17 +4,23 @@
 // Rarity tier definitions
 const RARITY_TIERS = {
     COMMON: { name: 'Common', level: 0, color: '#FFFFFF', requiredLevel: 0 },
-    UNCOMMON: { name: 'Uncommon', level: 1, color: '#1EFF00', requiredLevel: 15 },
-    RARE: { name: 'Rare', level: 2, color: '#0070DD', requiredLevel: 35 },
-    EPIC: { name: 'Epic', level: 3, color: '#A335EE', requiredLevel: 65 },
-    LEGENDARY: { name: 'Legendary', level: 4, color: '#FF8000', requiredLevel: 150 },
-    MYTHICAL: { name: 'Mythical', level: 5, color: '#E6CC80', requiredLevel: 160 }
+    UNCOMMON: { name: 'Uncommon', level: 1, color: '#1EFF00', requiredLevel: 8 },
+    RARE: { name: 'Rare', level: 2, color: '#0070DD', requiredLevel: 24 },
+    EPIC: { name: 'Epic', level: 3, color: '#A335EE', requiredLevel: 45 },
+    LEGENDARY: { name: 'Legendary', level: 4, color: '#FF8000', requiredLevel: 72 },
+    MYTHICAL: { name: 'Mythical', level: 5, color: '#E6CC80', requiredLevel: 104 },
+    DIVINE: { name: 'Divine', level: 6, color: '#7FDBFF', requiredLevel: 142 },
+    TRANSCENDENT: { name: 'Transcendent', level: 7, color: '#D000FF', requiredLevel: 195 },
+    OMEGA: { name: 'Omega', level: 8, color: '#FF1744', requiredLevel: 255 }
 };
 
 const MAX_TOOL_LEVEL = 256;
 
 // Helper to get rarity based on level
 function getRarityForLevel(level) {
+    if (level >= RARITY_TIERS.OMEGA.requiredLevel) return RARITY_TIERS.OMEGA;
+    if (level >= RARITY_TIERS.TRANSCENDENT.requiredLevel) return RARITY_TIERS.TRANSCENDENT;
+    if (level >= RARITY_TIERS.DIVINE.requiredLevel) return RARITY_TIERS.DIVINE;
     if (level >= RARITY_TIERS.MYTHICAL.requiredLevel) return RARITY_TIERS.MYTHICAL;
     if (level >= RARITY_TIERS.LEGENDARY.requiredLevel) return RARITY_TIERS.LEGENDARY;
     if (level >= RARITY_TIERS.EPIC.requiredLevel) return RARITY_TIERS.EPIC;
@@ -24,53 +30,62 @@ function getRarityForLevel(level) {
 }
 
 const GAME_DATA = {
-    // Minerals/Ores in order of value progression (35 tiers for 24-hour gameplay)
+    // Minerals/Ores in order of value progression (43 tiers for 24-hour gameplay)
     ores: [
         // Common Metals (Tier 1-7)
         { id: 'iron', name: 'Iron Ore', description: 'The first metal drawn from the earth...', baseValue: 1, unlockAt: 0, color: '#8B7355', textColor: '#FFFFFF', glowStrength: 0.25 },
-        { id: 'copper', name: 'Copper Ore', description: 'Ancient civilizations forged their tools from this...', baseValue: 3, unlockAt: 500, color: '#B87333', textColor: '#FFFFFF', glowStrength: 0.28 },
-        { id: 'zinc', name: 'Zinc Ore', description: 'A metal that whispers of corrosion...', baseValue: 8, unlockAt: 2500, color: '#C4C9CE', textColor: '#1A1A1A', glowStrength: 0.30 },
-        { id: 'tin', name: 'Tin Ore', description: 'Soft and malleable, yet strangely resilient...', baseValue: 20, unlockAt: 10000, color: '#D8DCE6', textColor: '#1A1A1A', glowStrength: 0.32 },
-        { id: 'lead', name: 'Lead Ore', description: 'Heavy with forgotten secrets...', baseValue: 50, unlockAt: 50000, color: '#6E6E6E', textColor: '#FFFFFF', glowStrength: 0.36 },
-        { id: 'nickel', name: 'Nickel Ore', description: 'From meteorites that fell from beyond...', baseValue: 125, unlockAt: 250000, color: '#8B8F88', textColor: '#FFFFFF', glowStrength: 0.38 },
-        { id: 'aluminum', name: 'Aluminum Ore', description: 'Light as air, strong as will...', baseValue: 300, unlockAt: 1000000, color: '#E0E6EA', textColor: '#1A1A1A', glowStrength: 0.40 },
+        { id: 'copper', name: 'Copper Ore', description: 'Ancient civilizations forged their tools from this...', baseValue: 3, unlockAt: 3500, color: '#B87333', textColor: '#FFFFFF', glowStrength: 0.32 },
+        { id: 'zinc', name: 'Zinc Ore', description: 'A metal that whispers of corrosion...', baseValue: 8, unlockAt: 14743, color: '#A8C7D8', textColor: '#1A1A1A', glowStrength: 0.39 },
+        { id: 'tin', name: 'Tin Ore', description: 'Soft and malleable, yet strangely resilient...', baseValue: 20, unlockAt: 62101, color: '#B7D4D8', textColor: '#1A1A1A', glowStrength: 0.46 },
+        { id: 'lead', name: 'Lead Ore', description: 'Heavy with forgotten secrets...', baseValue: 50, unlockAt: 261584, color: '#59636F', textColor: '#FFFFFF', glowStrength: 0.53 },
+        { id: 'nickel', name: 'Nickel Ore', description: 'From meteorites that fell from beyond...', baseValue: 125, unlockAt: 1101860, color: '#879B82', textColor: '#FFFFFF', glowStrength: 0.60 },
+        { id: 'aluminum', name: 'Aluminum Ore', description: 'Light as air, strong as will...', baseValue: 300, unlockAt: 4641315, color: '#B5D9E8', textColor: '#1A1A1A', glowStrength: 0.67 },
 
         // Precious Metals (Tier 8-14)
-        { id: 'silver', name: 'Silver Ore', description: 'The moon\'s blessing upon the earth...', baseValue: 750, unlockAt: 5000000, color: '#C7CED6', textColor: '#1A1A1A', glowStrength: 0.62 },
-        { id: 'gold', name: 'Gold Ore', description: 'The sun incarnate, buried deep...', baseValue: 1800, unlockAt: 25000000, color: '#FFD700', textColor: '#1A1A1A', glowStrength: 0.80 },
-        { id: 'platinum', name: 'Platinum Ore', description: 'Rarer than gold, colder than death...', baseValue: 4500, unlockAt: 100000000, color: '#EAEAF0', textColor: '#1A1A1A', glowStrength: 0.95 },
-        { id: 'palladium', name: 'Palladium Ore', description: 'Lustrous white metal from the abyss...', baseValue: 11000, unlockAt: 500000000, color: '#C9D2DF', textColor: '#1A1A1A', glowStrength: 1.05 },
-        { id: 'rhodium', name: 'Rhodium Ore', description: 'The rarest of metals, gleaming with power...', baseValue: 27000, unlockAt: 2500000000, color: '#F2F4F7', textColor: '#1A1A1A', glowStrength: 1.12 },
-        { id: 'iridium', name: 'Iridium Ore', description: 'Dense as a collapsed star...', baseValue: 65000, unlockAt: 10000000000, color: '#F4F6F8', textColor: '#1A1A1A', glowStrength: 1.22 },
-        { id: 'osmium', name: 'Osmium Ore', description: 'The densest element, pulled from oblivion...', baseValue: 160000, unlockAt: 50000000000, color: '#9AA0A6', textColor: '#1A1A1A', glowStrength: 1.28 },
+        { id: 'silver', name: 'Silver Ore', description: 'The moon\'s blessing upon the earth...', baseValue: 700, unlockAt: 19550400, color: '#9FB7C9', textColor: '#1A1A1A', glowStrength: 0.74 },
+        { id: 'gold', name: 'Gold Ore', description: 'The sun incarnate, buried deep...', baseValue: 1600, unlockAt: 82351258, color: '#C9A95D', textColor: '#1A1A1A', glowStrength: 0.81 },
+        { id: 'platinum', name: 'Platinum Ore', description: 'Rarer than gold, colder than death...', baseValue: 3600, unlockAt: 346884454, color: '#AFC4D6', textColor: '#1A1A1A', glowStrength: 0.88 },
+        { id: 'palladium', name: 'Palladium Ore', description: 'Lustrous white metal from the abyss...', baseValue: 8000, unlockAt: 1461165588, color: '#C8A6D8', textColor: '#1A1A1A', glowStrength: 0.95 },
+        { id: 'rhodium', name: 'Rhodium Ore', description: 'The rarest of metals, gleaming with power...', baseValue: 18000, unlockAt: 6154801268, color: '#D7B5A6', textColor: '#1A1A1A', glowStrength: 1.02 },
+        { id: 'iridium', name: 'Iridium Ore', description: 'Dense as a collapsed star...', baseValue: 40000, unlockAt: 25925589106, color: '#8EA8C4', textColor: '#1A1A1A', glowStrength: 1.09 },
+        { id: 'osmium', name: 'Osmium Ore', description: 'The densest element, pulled from oblivion...', baseValue: 90000, unlockAt: 109205178398, color: '#6C7484', textColor: '#FFFFFF', glowStrength: 1.16 },
 
         // Gemstones (Tier 15-21)
-        { id: 'garnet', name: 'Garnet Crystals', description: 'Deep red stones of ancient origin...', baseValue: 400000, unlockAt: 250000000000, color: '#AA2222', textColor: '#FFFFFF', glowStrength: 1.35 },
-        { id: 'amethyst', name: 'Amethyst Crystals', description: 'Purple gems that channel cosmic energy...', baseValue: 950000, unlockAt: 1000000000000, color: '#9966CC', textColor: '#FFFFFF', glowStrength: 1.45 },
-        { id: 'ruby', name: 'Ruby Crystals', description: 'Crimson as blood, hard as bone...', baseValue: 2300000, unlockAt: 5000000000000, color: '#E0115F', textColor: '#FFFFFF', glowStrength: 1.55 },
-        { id: 'sapphire', name: 'Sapphire Crystals', description: 'Blue as the depths of madness...', baseValue: 5500000, unlockAt: 25000000000000, color: '#0F52BA', textColor: '#FFFFFF', glowStrength: 1.60 },
-        { id: 'emerald', name: 'Emerald Crystals', description: 'Green with envy of the stars...', baseValue: 13000000, unlockAt: 100000000000000, color: '#50C878', textColor: '#FFFFFF', glowStrength: 1.66 },
-        { id: 'diamond', name: 'Diamond Crystals', description: 'Compressed time itself...', baseValue: 32000000, unlockAt: 500000000000000, color: '#B9F2FF', textColor: '#1A1A1A', glowStrength: 1.78 },
-        { id: 'alexandrite', name: 'Alexandrite', description: 'Changes color like reality shifts...', baseValue: 75000000, unlockAt: 2500000000000000, color: '#9370DB', textColor: '#FFFFFF', glowStrength: 1.88 },
+        { id: 'garnet', name: 'Garnet Crystals', description: 'Deep red stones of ancient origin...', baseValue: 200000, unlockAt: 460000000000, color: '#9E3048', textColor: '#FFFFFF', glowStrength: 1.23 },
+        { id: 'amethyst', name: 'Amethyst Crystals', description: 'Purple gems that channel cosmic energy...', baseValue: 450000, unlockAt: 1100000000000, color: '#8A4FB3', textColor: '#FFFFFF', glowStrength: 1.30 },
+        { id: 'ruby', name: 'Ruby Crystals', description: 'Crimson as blood, hard as bone...', baseValue: 1000000, unlockAt: 2600000000000, color: '#C2185B', textColor: '#FFFFFF', glowStrength: 1.37 },
+        { id: 'sapphire', name: 'Sapphire Crystals', description: 'Blue as the depths of madness...', baseValue: 2200000, unlockAt: 6300000000000, color: '#2454B8', textColor: '#FFFFFF', glowStrength: 1.44 },
+        { id: 'emerald', name: 'Emerald Crystals', description: 'Green with envy of the stars...', baseValue: 4800000, unlockAt: 15000000000000, color: '#2FA66A', textColor: '#FFFFFF', glowStrength: 1.51 },
+        { id: 'diamond', name: 'Diamond Crystals', description: 'Compressed time itself...', baseValue: 10000000, unlockAt: 36000000000000, color: '#8BE4F2', textColor: '#1A1A1A', glowStrength: 1.58 },
+        { id: 'alexandrite', name: 'Alexandrite', description: 'Changes color like reality shifts...', baseValue: 22000000, unlockAt: 86000000000000, color: '#6F55C7', textColor: '#FFFFFF', glowStrength: 1.65 },
 
         // Rare Minerals (Tier 22-28)
-        { id: 'painite', name: 'Painite', description: 'One of Earth\'s rarest minerals...', baseValue: 180000000, unlockAt: 500000000000, color: '#CC5555', textColor: '#FFFFFF', glowStrength: 1.95 },
-        { id: 'benitoite', name: 'Benitoite', description: 'Blue fire trapped in crystal form...', baseValue: 430000000, unlockAt: 1400000000000, color: '#4169E1', textColor: '#FFFFFF', glowStrength: 2.02 },
-        { id: 'taaffeite', name: 'Taaffeite', description: 'So rare it was mistaken for another gem...', baseValue: 1000000000, unlockAt: 4000000000000, color: '#E6C7FF', textColor: '#1A1A1A', glowStrength: 2.06 },
-        { id: 'meteorite', name: 'Meteorite Fragments', description: 'Fallen from beyond the stars...', baseValue: 2400000000, unlockAt: 11000000000000, color: '#4A4A4A', textColor: '#FFFFFF', glowStrength: 2.10 },
-        { id: 'obsidian', name: 'Obsidian Shards', description: 'Volcanic glass from hell\'s furnace...', baseValue: 5800000000, unlockAt: 30000000000000, color: '#0B0B0B', textColor: '#FFFFFF', glowStrength: 2.16 },
-        { id: 'moldavite', name: 'Moldavite', description: 'Born from cosmic impact...', baseValue: 14000000000, unlockAt: 85000000000000, color: '#3F7F3F', textColor: '#FFFFFF', glowStrength: 2.22 },
-        { id: 'carborundum', name: 'Carborundum', description: 'Harder than nature intended...', baseValue: 33000000000, unlockAt: 240000000000000, color: '#5A5A8C', textColor: '#FFFFFF', glowStrength: 2.26 },
+        { id: 'painite', name: 'Painite', description: 'One of Earth\'s rarest minerals...', baseValue: 48000000, unlockAt: 210000000000000, color: '#B83C57', textColor: '#FFFFFF', glowStrength: 1.73 },
+        { id: 'benitoite', name: 'Benitoite', description: 'Blue fire trapped in crystal form...', baseValue: 105000000, unlockAt: 500000000000000, color: '#2878D0', textColor: '#FFFFFF', glowStrength: 1.80 },
+        { id: 'taaffeite', name: 'Taaffeite', description: 'So rare it was mistaken for another gem...', baseValue: 230000000, unlockAt: 1200000000000000, color: '#C58BE8', textColor: '#1A1A1A', glowStrength: 1.87 },
+        { id: 'meteorite', name: 'Meteorite Fragments', description: 'Fallen from beyond the stars...', baseValue: 500000000, unlockAt: 2900000000000000, color: '#7A6657', textColor: '#FFFFFF', glowStrength: 1.94 },
+        { id: 'obsidian', name: 'Obsidian Shards', description: 'Volcanic glass from hell\'s furnace...', baseValue: 1100000000, unlockAt: 7000000000000000, color: '#261B3D', textColor: '#FFFFFF', glowStrength: 2.01 },
+        { id: 'moldavite', name: 'Moldavite', description: 'Born from cosmic impact...', baseValue: 2400000000, unlockAt: 17000000000000000, color: '#478F67', textColor: '#FFFFFF', glowStrength: 2.08 },
+        { id: 'carborundum', name: 'Carborundum', description: 'Harder than nature intended...', baseValue: 5200000000, unlockAt: 41000000000000000, color: '#4C4F9C', textColor: '#FFFFFF', glowStrength: 2.15 },
 
-        // Eldritch Materials (Tier 29-35)
-        { id: 'voidstone', name: 'Voidstone', description: 'A mineral that should not exist...', baseValue: 80000000000, unlockAt: 700000000000000, color: '#1a0033', textColor: '#FFFFFF', glowStrength: 2.40 },
-        { id: 'starmetal', name: 'Star-Metal', description: 'Forged in the heart of dying suns...', baseValue: 190000000000, unlockAt: 4000000000000000, color: '#FFE4B5', textColor: '#1A1A1A', glowStrength: 2.02 },
-        { id: 'darkmatter', name: 'Dark Matter Crystal', description: 'The universe\'s hidden mass made tangible...', baseValue: 450000000000, unlockAt: 10000000000000000, color: '#0D0D1F', textColor: '#FFFFFF', glowStrength: 2.60 },
-        { id: 'timecrystal', name: 'Time Crystal', description: 'A pattern that repeats in time, not space...', baseValue: 1100000000000, unlockAt: 30000000000000000, color: '#00CED1', textColor: '#1A1A1A', glowStrength: 2.10 },
-        { id: 'phase_matter', name: 'Phase Matter', description: 'Exists in multiple dimensions at once...', baseValue: 2600000000000, unlockAt: 100000000000000000, color: '#FF1493', textColor: '#FFFFFF', glowStrength: 2.30 },
-        { id: 'reality_shard', name: 'Reality Shard', description: 'Fragments of broken universes...', baseValue: 6200000000000, unlockAt: 300000000000000000, color: '#FF6347', textColor: '#FFFFFF', glowStrength: 2.28 },
-        { id: 'elder_essence', name: 'Elder Essence', description: 'The crystallized dreams of sleeping gods...', baseValue: 15000000000000, unlockAt: 800000000000000000, color: '#8B008B', textColor: '#FFFFFF', glowStrength: 2.80 },
-        { id: 'azathoth_core', name: 'Azathoth\'s Core', description: 'The nuclear chaos at the center of infinity...', baseValue: 36000000000000, unlockAt: 2500000000000000000, color: '#4B0082', textColor: '#FFFFFF', glowStrength: 3.20 },
+        // Exotic Minerals (Tier 29-35)
+        { id: 'tanzanite', name: 'Tanzanite', description: 'A blue-violet stone found only in one corner of the world...', baseValue: 11000000000, unlockAt: 98000000000000000, color: '#3151A6', textColor: '#FFFFFF', glowStrength: 2.22 },
+        { id: 'paraiba', name: 'Paraiba Tourmaline', description: 'Electric blue crystal lit from within...', baseValue: 23000000000, unlockAt: 230000000000000000, color: '#00AFA0', textColor: '#FFFFFF', glowStrength: 2.29 },
+        { id: 'red_beryl', name: 'Red Beryl', description: 'A scarlet rarity born in volcanic stone...', baseValue: 48000000000, unlockAt: 560000000000000000, color: '#D83A46', textColor: '#FFFFFF', glowStrength: 2.36 },
+        { id: 'jeremejevite', name: 'Jeremejevite', description: 'Pale blue crystals hidden in desert rock...', baseValue: 100000000000, unlockAt: 1340000000000000000, color: '#6BC4D8', textColor: '#1A1A1A', glowStrength: 2.43 },
+        { id: 'grandidierite', name: 'Grandidierite', description: 'A blue-green mineral touched by the sea...', baseValue: 210000000000, unlockAt: 3220000000000000000, color: '#3A9B8C', textColor: '#FFFFFF', glowStrength: 2.50 },
+        { id: 'musgravite', name: 'Musgravite', description: 'A smoky violet gem from the deepest crust...', baseValue: 440000000000, unlockAt: 7730000000000000000, color: '#77508F', textColor: '#FFFFFF', glowStrength: 2.57 },
+        { id: 'serendibite', name: 'Serendibite', description: 'A midnight blue crystal of improbable rarity...', baseValue: 920000000000, unlockAt: 18600000000000000000, color: '#173B6C', textColor: '#FFFFFF', glowStrength: 2.64 },
+
+        // Eldritch Materials (Tier 36-42)
+        { id: 'voidstone', name: 'Voidstone', description: 'A mineral that should not exist...', baseValue: 1900000000000, unlockAt: 44600000000000000000, color: '#1A0033', textColor: '#FFFFFF', glowStrength: 2.71 },
+        { id: 'starmetal', name: 'Star-Metal', description: 'Forged in the heart of dying suns...', baseValue: 4000000000000, unlockAt: 107000000000000000000, color: '#D6A85F', textColor: '#1A1A1A', glowStrength: 2.78 },
+        { id: 'darkmatter', name: 'Dark Matter Crystal', description: 'The universe\'s hidden mass made tangible...', baseValue: 8200000000000, unlockAt: 257000000000000000000, color: '#17104A', textColor: '#FFFFFF', glowStrength: 2.85 },
+        { id: 'timecrystal', name: 'Time Crystal', description: 'A pattern that repeats in time, not space...', baseValue: 17000000000000, unlockAt: 617000000000000000000, color: '#00B8C8', textColor: '#1A1A1A', glowStrength: 2.92 },
+        { id: 'phase_matter', name: 'Phase Matter', description: 'Exists in multiple dimensions at once...', baseValue: 35000000000000, unlockAt: 1480000000000000000000, color: '#E62CBA', textColor: '#FFFFFF', glowStrength: 2.99 },
+        { id: 'reality_shard', name: 'Reality Shard', description: 'Fragments of broken universes...', baseValue: 72000000000000, unlockAt: 3550000000000000000000, color: '#F06A4F', textColor: '#FFFFFF', glowStrength: 3.06 },
+        { id: 'elder_essence', name: 'Elder Essence', description: 'The crystallized dreams of sleeping gods...', baseValue: 150000000000000, unlockAt: 8520000000000000000000, color: '#A52AA5', textColor: '#FFFFFF', glowStrength: 3.13 },
+        { id: 'azathoth_core', name: 'Azathoth\'s Core', description: 'The nuclear chaos at the center of infinity...', baseValue: 310000000000000, unlockAt: 20400000000000000000000, color: '#5E1B8F', textColor: '#FFFFFF', glowStrength: 3.20 },
     ],
 
     // Tools that generate ore automatically (Lovecraft-themed, 25 tiers)
@@ -81,7 +96,7 @@ const GAME_DATA = {
             description: 'A devoted follower who tirelessly digs',
             baseCost: 50,
             baseProduction: 0.06,
-            costMultiplier: 1.05,
+            costMultiplier: 1.025,
             icon: '🧙'
         },
         {
@@ -90,7 +105,7 @@ const GAME_DATA = {
             description: 'Grave-dwelling creatures with a nose for ore',
             baseCost: 500,
             baseProduction: 0.1,
-            costMultiplier: 1.06,
+            costMultiplier: 1.05,
             icon: '🧟'
         },
         {
@@ -521,12 +536,12 @@ const GAME_DATA = {
         { id: 'm42', name: 'Gemstone Dreams', description: 'Unlock Ruby Crystals', requirement: { oreIndex: 16 }, reward: { ore: 100000000 }, repeatable: false },
         { id: 'm43', name: 'Diamond Hunter', description: 'Unlock Diamond Crystals', requirement: { oreIndex: 19 }, reward: { ore: 10000000000 }, repeatable: false },
         { id: 'm44', name: 'Obsidian Depths', description: 'Unlock Obsidian Shards', requirement: { oreIndex: 26 }, reward: { ore: 1000000000000 }, repeatable: false },
-        { id: 'm45', name: 'Void Walker', description: 'Unlock Voidstone', requirement: { oreIndex: 28 }, reward: { madness: 25 }, repeatable: false },
-        { id: 'm46', name: 'Star Forger', description: 'Unlock Star-Metal', requirement: { oreIndex: 29 }, reward: { madness: 50 }, repeatable: false },
-        { id: 'm47', name: 'Dark Matter Seeker', description: 'Unlock Dark Matter Crystal', requirement: { oreIndex: 30 }, reward: { madness: 100 }, repeatable: false },
-        { id: 'm48', name: 'Master of Time', description: 'Unlock Time Crystal', requirement: { oreIndex: 31 }, reward: { madness: 150 }, repeatable: false },
-        { id: 'm49', name: 'Reality Bender', description: 'Unlock Reality Shard', requirement: { oreIndex: 33 }, reward: { madness: 250 }, repeatable: false },
-        { id: 'm50', name: 'Azathoth Awakens', description: 'Unlock Azathoth\'s Core', requirement: { oreIndex: 34 }, reward: { madness: 500 }, repeatable: false },
+        { id: 'm45', name: 'Void Walker', description: 'Unlock Voidstone', requirement: { oreIndex: 35 }, reward: { madness: 25 }, repeatable: false },
+        { id: 'm46', name: 'Star Forger', description: 'Unlock Star-Metal', requirement: { oreIndex: 36 }, reward: { madness: 50 }, repeatable: false },
+        { id: 'm47', name: 'Dark Matter Seeker', description: 'Unlock Dark Matter Crystal', requirement: { oreIndex: 37 }, reward: { madness: 100 }, repeatable: false },
+        { id: 'm48', name: 'Master of Time', description: 'Unlock Time Crystal', requirement: { oreIndex: 38 }, reward: { madness: 150 }, repeatable: false },
+        { id: 'm49', name: 'Reality Bender', description: 'Unlock Reality Shard', requirement: { oreIndex: 40 }, reward: { madness: 250 }, repeatable: false },
+        { id: 'm50', name: 'Azathoth Awakens', description: 'Unlock Azathoth\'s Core', requirement: { oreIndex: 42 }, reward: { madness: 500 }, repeatable: false },
     ]
 };
 
@@ -561,7 +576,24 @@ const GameDataHelper = {
         const tool = this.getTool(toolId);
         if (!tool) return 0;
         if (currentLevel >= MAX_TOOL_LEVEL) return Infinity;
-        return Math.floor(tool.baseCost * Math.pow(tool.costMultiplier, currentLevel));
+
+        // Increase the per-level multiplier logarithmically so early upgrades remain
+        // attainable while higher levels require progressively more investment.
+        const logarithmicScale = 1 + Math.log1p(currentLevel) / 4;
+        const effectiveMultiplier = 1 + (tool.costMultiplier - 1) * logarithmicScale;
+        return Math.floor(tool.baseCost * Math.pow(effectiveMultiplier, currentLevel));
+    },
+
+    // Calculate upgrade cost with a progressively steeper logarithmic tier premium.
+    getUpgradeCost(upgradeId) {
+        const upgradeIndex = GAME_DATA.upgrades.findIndex(upgrade => upgrade.id === upgradeId);
+        const upgrade = upgradeIndex >= 0 ? GAME_DATA.upgrades[upgradeIndex] : null;
+        if (!upgrade) return 0;
+
+        const tierMatch = upgrade.id.match(/(\d+)$/);
+        const tier = tierMatch ? parseInt(tierMatch[1], 10) : upgradeIndex + 1;
+        const logarithmicPremium = 1 + Math.log1p(tier - 1) * 0.45;
+        return Math.floor(upgrade.cost * logarithmicPremium);
     },
 
     // Calculate tool production at a specific level (scales per level, with rarity bonuses)
@@ -582,6 +614,9 @@ const GameDataHelper = {
         else if (rarity === RARITY_TIERS.EPIC) rarityBonus = 2;
         else if (rarity === RARITY_TIERS.LEGENDARY) rarityBonus = 3;
         else if (rarity === RARITY_TIERS.MYTHICAL) rarityBonus = 5;
+        else if (rarity === RARITY_TIERS.DIVINE) rarityBonus = 7;
+        else if (rarity === RARITY_TIERS.TRANSCENDENT) rarityBonus = 10;
+        else if (rarity === RARITY_TIERS.OMEGA) rarityBonus = 15;
 
         return production * rarityBonus;
     },

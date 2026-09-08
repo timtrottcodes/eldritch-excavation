@@ -134,6 +134,17 @@ body {
     transform: scale(1.015);
 }
 
+/* The proximity highlight is only enabled for the panel currently under the pointer. */
+.panel.proximity-active::after {
+    background: radial-gradient(
+        closest-side at var(--panel-glow-x, 50%) var(--panel-glow-y, 50%),
+        rgba(var(--panel-glow-rgb), calc(var(--panel-glow-alpha) * var(--panel-glow-opacity, 1))) 0%,
+        rgba(0, 0, 0, 0) 55%
+    );
+    filter: blur(34px);
+    transform: scale(1.015);
+}
+
 /* subtle rim outline using inner border tinted by the ore colour */
 .panel::before {
     content: '';
@@ -150,6 +161,12 @@ body {
 .panel:hover::before,
 .panel:focus-within::before {
     box-shadow: inset 0 0 0 1px rgba(var(--panel-glow-rgb), 0.12), inset 0 0 12px rgba(var(--panel-glow-rgb), 0.06);
+}
+
+.panel.proximity-active::before {
+    box-shadow:
+        inset 0 0 0 1px rgba(var(--panel-glow-rgb), 0.16),
+        inset 0 0 16px rgba(var(--panel-glow-rgb), 0.08);
 }
 
 /* apply additional outer neon rim using box-shadow for interactive panels */
@@ -228,7 +245,7 @@ body {
 }
 
 
-/* When a panel is interactive or highlighted, show the glow */
+/* Keep the existing highlight behavior for keyboard navigation. */
 .panel.interactive:focus-within::after,
 .panel:hover::after,
 .panel:focus-within::after {

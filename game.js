@@ -354,8 +354,14 @@ function createClickParticles() {
         particleSymbol = 'particle-symbol-star';
         particleCount = 6 + Math.floor(Math.random() * 5); // 6-10 particles
         energyLevel = 2;
+    } else if (currentOreIndex < 35) {
+        // Exotic Minerals (28-34): Intense Sparks
+        particleClass = 'particle-spark-intense';
+        particleSymbol = 'particle-symbol-energy';
+        particleCount = 8 + Math.floor(Math.random() * 7); // 8-14 particles
+        energyLevel = 2.5;
     } else {
-        // Eldritch Materials (28+): Intense Sparks
+        // Eldritch Materials (35+): Intense Sparks
         particleClass = 'particle-spark-intense';
         particleSymbol = 'particle-symbol-energy';
         particleCount = 8 + Math.floor(Math.random() * 7); // 8-14 particles
@@ -365,7 +371,7 @@ function createClickParticles() {
     const container = $('#damage-numbers');
 
     // For eldritch materials, add energy ring effect
-    if (currentOreIndex >= 28 && energyLevel >= 3) {
+    if (currentOreIndex >= 35 && energyLevel >= 3) {
         const ring = $('<div class="eldritch-ring">')
             .css('color', currentOre.color);
         container.append(ring);
@@ -410,6 +416,20 @@ function createClickParticles() {
     }
 }
 
+// Return how many levels can be purchased without exceeding the available ore.
+function getAffordableToolLevels(toolId, currentLevel, maxLevels, availableOre) {
+    let affordableLevels = 0;
+    let totalCost = 0;
+
+    for (let i = 0; i < maxLevels; i++) {
+        totalCost += GameDataHelper.getToolCost(toolId, currentLevel + i);
+        if (totalCost > availableOre) break;
+        affordableLevels++;
+    }
+
+    return affordableLevels;
+}
+
 // Buy tool (level up)
 function buyTool(toolId, levels = 1) {
     const tool = GameDataHelper.getTool(toolId);
@@ -428,8 +448,6 @@ function buyTool(toolId, levels = 1) {
     // Calculate how many levels we can actually buy
     const maxLevels = Math.min(levels, MAX_TOOL_LEVEL - currentLevel);
     let totalCost = 0;
-
-    // Calculate total cost for buying multiple levels
     for (let i = 0; i < maxLevels; i++) {
         totalCost += GameDataHelper.getToolCost(toolId, currentLevel + i);
     }
@@ -458,8 +476,9 @@ function buyUpgrade(upgradeId) {
         return false;
     }
 
-    if (gameState.ore >= upgrade.cost) {
-        gameState.ore -= upgrade.cost;
+    const upgradeCost = GameDataHelper.getUpgradeCost(upgradeId);
+    if (gameState.ore >= upgradeCost) {
+        gameState.ore -= upgradeCost;
         gameState.upgrades.push(upgradeId);
         updateCalculations();
         checkMissions();
@@ -1130,7 +1149,7 @@ function updateThemeColor(oreColor, textColor, glowStrength) {
     document.documentElement.style.setProperty('--panel-glow-strong-alpha', String(panelGlowStrongAlpha));
 }
 
-// Attach mousemove handlers to panels to implement mouse-follow glow and per-panel intensity
+// Attach pointer handlers so only the panel under the pointer gets the proximity highlight.
 function setupPanelGlows() {
     if (!window.__panelGlowsInitialized) {
         const panels = document.querySelectorAll('.panel');
@@ -1140,7 +1159,11 @@ function setupPanelGlows() {
             el.style.setProperty('--panel-glow-y', '50%');
             el.style.setProperty('--panel-glow-opacity', '0.65'); // base multiplier
 
-            el.addEventListener('mousemove', (e) => {
+            el.addEventListener('pointerenter', () => {
+                el.classList.add('proximity-active');
+            });
+
+            el.addEventListener('pointermove', (e) => {
                 const rect = el.getBoundingClientRect();
                 const x = ((e.clientX - rect.left) / rect.width) * 100;
                 const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -1158,7 +1181,8 @@ function setupPanelGlows() {
                 el.style.setProperty('--panel-glow-opacity', String(Math.max(0.45, Math.min(1.2, intensity))));
             });
 
-            el.addEventListener('mouseleave', () => {
+            el.addEventListener('pointerleave', () => {
+                el.classList.remove('proximity-active');
                 // reset to center with a smooth transition
                 el.style.setProperty('--panel-glow-x', '50%');
                 el.style.setProperty('--panel-glow-y', '50%');
@@ -1187,12 +1211,9 @@ function updateButtonStates() {
                     $(this).find('.buy-btn').first().prop('disabled', gameState.ore < cost1);
 
                     // +10 button
-                    let cost10 = 0;
                     const maxLevels = Math.min(10, MAX_TOOL_LEVEL - level);
-                    for (let i = 0; i < maxLevels; i++) {
-                        cost10 += GameDataHelper.getToolCost(tool.id, level + i);
-                    }
-                    $(this).find('.buy-btn').eq(1).prop('disabled', gameState.ore < cost10 || maxLevels === 0);
+                    const affordableLevels = getAffordableToolLevels(tool.id, level, maxLevels, gameState.ore);
+                    $(this).find('.buy-btn').eq(1).prop('disabled', affordableLevels < maxLevels);
                 }
             });
         }
@@ -1207,7 +1228,7 @@ function updateButtonStates() {
             $(`#upgrades-list .item-card`).each(function() {
                 const cardText = $(this).find('.item-name').text();
                 if (cardText === upgrade.name) {
-                    $(this).find('.buy-btn').prop('disabled', gameState.ore < upgrade.cost);
+                    $(this).find('.buy-btn').prop('disabled', gameState.ore < GameDataHelper.getUpgradeCost(upgrade.id));
                 }
             });
         }
@@ -1316,12 +1337,9 @@ function renderTools() {
             buyBtn.on('click', () => buyTool(tool.id, 1));
 
             const buy10Btn = $('<button class="buy-btn">').text('Level +10');
-            let cost10 = 0;
             const maxLevels = Math.min(10, MAX_TOOL_LEVEL - level);
-            for (let i = 0; i < maxLevels; i++) {
-                cost10 += GameDataHelper.getToolCost(tool.id, level + i);
-            }
-            buy10Btn.prop('disabled', gameState.ore < cost10 || maxLevels === 0);
+            const affordableLevels = getAffordableToolLevels(tool.id, level, maxLevels, gameState.ore);
+            buy10Btn.prop('disabled', affordableLevels < maxLevels);
             buy10Btn.on('click', () => buyTool(tool.id, 10));
 
             // Put level buttons side-by-side in a row to save vertical space
@@ -1352,26 +1370,10 @@ function renderTools() {
 function createRarityProgressBar(currentLevel) {
     const currentRarity = getRarityForLevel(currentLevel);
 
-    // Find next rarity
-    let nextRarity = null;
-    let nextThreshold = MAX_TOOL_LEVEL;
-
-    if (currentLevel < RARITY_TIERS.UNCOMMON.requiredLevel) {
-        nextRarity = RARITY_TIERS.UNCOMMON;
-        nextThreshold = RARITY_TIERS.UNCOMMON.requiredLevel;
-    } else if (currentLevel < RARITY_TIERS.RARE.requiredLevel) {
-        nextRarity = RARITY_TIERS.RARE;
-        nextThreshold = RARITY_TIERS.RARE.requiredLevel;
-    } else if (currentLevel < RARITY_TIERS.EPIC.requiredLevel) {
-        nextRarity = RARITY_TIERS.EPIC;
-        nextThreshold = RARITY_TIERS.EPIC.requiredLevel;
-    } else if (currentLevel < RARITY_TIERS.LEGENDARY.requiredLevel) {
-        nextRarity = RARITY_TIERS.LEGENDARY;
-        nextThreshold = RARITY_TIERS.LEGENDARY.requiredLevel;
-    } else if (currentLevel < RARITY_TIERS.MYTHICAL.requiredLevel) {
-        nextRarity = RARITY_TIERS.MYTHICAL;
-        nextThreshold = RARITY_TIERS.MYTHICAL.requiredLevel;
-    }
+    // Find the next rarity from the ordered thresholds, including future tiers.
+    const rarityProgression = Object.values(RARITY_TIERS);
+    const nextRarity = rarityProgression.find(rarity => currentLevel < rarity.requiredLevel) || null;
+    const nextThreshold = nextRarity ? nextRarity.requiredLevel : MAX_TOOL_LEVEL;
 
     const progressContainer = $('<div class="rarity-progress">');
 
@@ -1430,8 +1432,9 @@ function renderUpgrades() {
         if (owned) {
             buyBtn.text('Purchased').prop('disabled', true);
         } else {
-            buyBtn.text(`Buy - 💰 ${formatNumber(upgrade.cost)}`);
-            buyBtn.prop('disabled', gameState.ore < upgrade.cost);
+            const upgradeCost = GameDataHelper.getUpgradeCost(upgrade.id);
+            buyBtn.text(`Buy - 💰 ${formatNumber(upgradeCost)}`);
+            buyBtn.prop('disabled', gameState.ore < upgradeCost);
             buyBtn.on('click', () => buyUpgrade(upgrade.id));
         }
 

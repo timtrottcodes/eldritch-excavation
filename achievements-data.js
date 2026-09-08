@@ -486,7 +486,7 @@ const ACHIEVEMENTS = [
         name: 'Beyond Reality',
         description: 'Unlock Voidstone',
         category: 'EXPLORATION',
-        requirement: { oreIndex: 28 },
+        requirement: { oreIndex: 35 },
         reward: { globalMultiplier: 0.1 },
         icon: '🌀'
     },
@@ -495,16 +495,16 @@ const ACHIEVEMENTS = [
         name: "Azathoth's Blessing",
         description: "Unlock Azathoth's Core",
         category: 'EXPLORATION',
-        requirement: { oreIndex: 34 },
+        requirement: { oreIndex: 42 },
         reward: { globalMultiplier: 0.25 },
         icon: '⚫'
     },
     {
         id: 'all_ores',
         name: 'Cosmic Explorer',
-        description: 'Unlock all 35 ore tiers',
+        description: 'Unlock all 43 ore tiers',
         category: 'EXPLORATION',
-        requirement: { oreIndex: 34 },
+        requirement: { oreIndex: 42 },
         reward: { globalMultiplier: 0.5 },
         icon: '🌌'
     },
@@ -533,7 +533,7 @@ const ACHIEVEMENTS = [
         name: 'Into the Void',
         description: 'Reach Voidstone in under 12 hours',
         category: 'SPEED',
-        requirement: { reachOreInTime: { oreIndex: 28, seconds: 43200 } },
+        requirement: { reachOreInTime: { oreIndex: 35, seconds: 43200 } },
         reward: { globalMultiplier: 0.15 },
         icon: '🏃'
     },
@@ -611,7 +611,7 @@ const ACHIEVEMENTS = [
     {
         id: 'secret_test_all_crystals',
         name: 'Crystal Connoisseur',
-        description: 'View all 35 crystal designs',
+        description: 'View all 43 crystal designs',
         category: 'SECRETS',
         requirement: { viewedAllCrystals: true },
         reward: { globalMultiplier: 0.05 },

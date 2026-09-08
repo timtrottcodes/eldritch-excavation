@@ -105,8 +105,9 @@ Seven categories of achievements with permanent bonuses:
 ### 👾 **25 Lovecraftian Workers**
 Summon eldritch entities to do your bidding:
 - **Level System**: 0-256 per worker
-- **Rarity Tiers**: Common → Uncommon → Rare → Epic → Legendary → Mythical
-- **Progressive Unlock**: Hidden until previous worker reaches Epic (Lv 100)
+- **Rarity Tiers**: Common → Uncommon → Rare → Epic → Legendary → Mythical → Divine → Transcendent → Omega
+- **Logarithmic rarity progression**: Thresholds become progressively harder, ending at Omega (Lv 255)
+- **Progressive Unlock**: Hidden until previous worker reaches Epic
 - **Progression**: Cultist → Ghoul → Shoggoth → Deep One → Mi-Go → ... → Cthulhu → Azathoth
 - **Exponential Scaling**: Each tier massively stronger than the last
 
@@ -292,7 +293,7 @@ Track your progress across seven categories:
 - **Tool Collector**: Worker management (1 purchase → max all)
 - **Prestige Hunter**: Madness milestones (1 → 100 prestiges)
 - **Collection Master**: Upgrades and relics
-- **Deep Miner**: Unlock all 35 ore tiers
+- **Deep Miner**: Unlock all 43 ore tiers
 - **Speedrunner**: Time-based challenges
 - **Secret Hunter**: Hidden conditions
 
